@@ -1,69 +1,122 @@
-# CodeIgniter 4 Application Starter
+Gerando PDF do README - Sistema de Delivery
 
-## What is CodeIgniter?
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, ListFlowable, ListItem
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from reportlab.platypus import HRFlowable
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+# Caminho do arquivo
+file_path = "/mnt/data/README_Sistema_Delivery.pdf"
+doc = SimpleDocTemplate(file_path)
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+elements = []
+styles = getSampleStyleSheet()
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+# Título
+elements.append(Paragraph("<b>SISTEMA DE DELIVERY</b>", styles["Title"]))
+elements.append(Spacer(1, 0.3 * inch))
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+# Seção: Sobre
+elements.append(Paragraph("<b>Sobre o Projeto</b>", styles["Heading2"]))
+elements.append(Spacer(1, 0.2 * inch))
+elements.append(Paragraph(
+    "Sistema web de Delivery desenvolvido para gerenciamento de pedidos, clientes e produtos. "
+    "O sistema permite cadastrar itens do cardapio, realizar pedidos e acompanhar o status das entregas. "
+    "Projeto desenvolvido utilizando arquitetura MVC (Model-View-Controller).",
+    styles["BodyText"]
+))
+elements.append(Spacer(1, 0.3 * inch))
 
-## Installation & updates
+# Funcionalidades
+elements.append(Paragraph("<b>Funcionalidades</b>", styles["Heading2"]))
+elements.append(Spacer(1, 0.2 * inch))
 
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
+funcionalidades = [
+    "Cadastro de produtos",
+    "Cadastro de clientes",
+    "Realizacao de pedidos",
+    "Listagem de pedidos",
+    "Atualizacao de status (Pendente, Em preparo, Saiu para entrega, Entregue)",
+    "Interface responsiva com Bootstrap"
+]
 
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
+elements.append(ListFlowable(
+    [ListItem(Paragraph(item, styles["BodyText"])) for item in funcionalidades],
+    bulletType='bullet'
+))
+elements.append(Spacer(1, 0.3 * inch))
 
-## Setup
+# Tecnologias
+elements.append(Paragraph("<b>Tecnologias Utilizadas</b>", styles["Heading2"]))
+elements.append(Spacer(1, 0.2 * inch))
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+tecnologias = [
+    "PHP",
+    "PostgreSQL	",
+    "TailWind",
+    "HTML5",
+    "CSS3"
+]
 
-## Important Change with index.php
+elements.append(ListFlowable(
+    [ListItem(Paragraph(item, styles["BodyText"])) for item in tecnologias],
+    bulletType='bullet'
+))
+elements.append(Spacer(1, 0.3 * inch))
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+# Instalação
+elements.append(Paragraph("<b>Como Instalar</b>", styles["Heading2"]))
+elements.append(Spacer(1, 0.2 * inch))
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+instalacao = [
+    "1. Clonar o repositorio.",
+    "2. Criar o banco de dados no MySQL.",
+    "3. Importar o arquivo .sql do projeto.",
+    "4. Configurar o arquivo config/database.php.",
+    "5. Iniciar um servidor local (XAMPP ou similar).",
+    "6. Acessar no navegador: http://localhost/nome-do-projeto"
+]
 
-**Please** read the user guide for a better explanation of how CI4 works!
+elements.append(ListFlowable(
+    [ListItem(Paragraph(item, styles["BodyText"])) for item in instalacao],
+    bulletType='bullet'
+))
+elements.append(Spacer(1, 0.3 * inch))
 
-## Repository Management
+# Banco de Dados
+elements.append(Paragraph("<b>Banco de Dados (Tabelas Principais)</b>", styles["Heading2"]))
+elements.append(Spacer(1, 0.2 * inch))
 
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
+tabelas = [
+    "avaliacao",
+    “cardapio”,
+    “entregador”,
+    "item_pedido"
+    “pagamento”,
+    "pedidos",
+    “pedido”,
+    “rastreamento”,
+    "repasse",
+    “restaurante”,
+    “usuario”,
+     
+]
 
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
+elements.append(ListFlowable(
+    [ListItem(Paragraph(item, styles["BodyText"])) for item in tabelas],
+    bulletType='bullet'
+))
+elements.append(Spacer(1, 0.5 * inch))
 
-## Server Requirements
+# Autor
+elements.append(Paragraph("<b>Autor</b>", styles["Heading2"]))
+elements.append(Spacer(1, 0.2 * inch))
+elements.append(Paragraph("Equipe 4", styles["BodyText"]))
 
-PHP version 8.2 or higher is required, with the following extensions installed:
+# Construir PDF
+doc.build(elements)
 
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
+file_path
 
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - The end of life date for PHP 8.1 was December 31, 2025.
-> - If you are still using below PHP 8.2, you should upgrade immediately.
-> - The end of life date for PHP 8.2 will be December 31, 2026.
 
-Additionally, make sure that the following extensions are enabled in your PHP:
-
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
