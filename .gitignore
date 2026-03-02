@@ -85,6 +85,7 @@ phpunit
 # Composer
 #-------------------------
 vendor/
+node_modules/
 
 #-------------------------
 # IDE / Development Files
@@ -124,3 +125,11 @@ _modules/*
 
 /results/
 /phpunit*.xml
+#-------------------------
+# Frontend React (Vite)
+#-------------------------
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+public/app/

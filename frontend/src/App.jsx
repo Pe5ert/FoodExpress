@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import './App.css'
-
+//teste de coisa
 function App() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -10,6 +10,7 @@ function App() {
     setLoading(true)
     setError(null)
     try {
+      //função assicrona ignora essa pasta back-end
       const response = await fetch('/api/usuarios')
       
       if (!response.ok) {
