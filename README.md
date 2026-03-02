@@ -1,4 +1,4 @@
-Gerando PDF do README - Sistema de Delivery
+ README - Sistema de Delivery
 
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, ListFlowable, ListItem
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
