@@ -90,7 +90,7 @@ export default function NavBarCliente() {
   return (
     <NavBarContainer>
       <div className="logo">
-        🍕 FoodExpress
+         FoodExpress
       </div>
       <ul>
         <li><Link to="/">Início</Link></li>

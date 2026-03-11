@@ -7,7 +7,7 @@ export const GlobalStyle = createGlobalStyle`
     box-sizing: border-box;
   }
 
-  /* Garantir que root ocupe 100% da altura para permitir posicionamento do footer */
+  
   html, body, #root {
     height: 100%;
   }

@@ -64,7 +64,7 @@ const Footer = () => {
       </Container>
 
       <BottomBar>
-        <p>&copy; 2024 Your Company, Inc. All rights reserved.</p>
+        <p>&copy; 2026 Your Company, Inc. All rights reserved.</p>
       </BottomBar>
     </StyledFooter>
   );

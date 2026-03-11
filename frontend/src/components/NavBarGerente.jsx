@@ -144,7 +144,7 @@ export default function NavBarGerente() {
   return (
     <NavBarContainer>
       <div className="logo">
-        👨‍💼 FoodExpress
+        FoodExpress
       </div>
       <div className="nav-content">
         <ul>
@@ -158,10 +158,10 @@ export default function NavBarGerente() {
       </div>
       <div className="status-info">
         <div className="restaurant-name">Seu Restaurante</div>
-        <div className="badge">⭐ Ativo</div>
+        <div className="badge"> Ativo</div>
       </div>
       <div className="user-menu">
-        <button>👤 Perfil</button>
+        <button> Perfil</button>
         <button className="logout">Sair</button>
       </div>
     </NavBarContainer>

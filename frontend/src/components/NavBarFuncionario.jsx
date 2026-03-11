@@ -126,7 +126,7 @@ export default function NavBarFuncionario() {
   return (
     <NavBarContainer>
       <div className="logo">
-        🛵 FoodExpress
+        FoodExpress
       </div>
       <div className="nav-content">
         <ul>
@@ -136,11 +136,11 @@ export default function NavBarFuncionario() {
           <li><Link to="/Suporte">Suporte</Link></li>
         </ul>
         <div className="status-badge">
-          ⚫ Offline
+           Offline
         </div>
       </div>
       <div className="user-menu">
-        <button>👤 Perfil</button>
+        <button> Perfil</button>
         <button className="logout">Sair</button>
       </div>
     </NavBarContainer>
