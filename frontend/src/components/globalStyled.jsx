@@ -7,7 +7,6 @@ export const GlobalStyle = createGlobalStyle`
     box-sizing: border-box;
   }
 
-  
   html, body, #root {
     height: 100%;
   }
@@ -17,6 +16,18 @@ export const GlobalStyle = createGlobalStyle`
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    background-color: #f0f0f0;
+    background-color: #FFF8F5;
+    color: #2D3436;
+    font-family: 'Inter', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+  }
+
+  .price, .preco {
+    font-family: 'Roboto Mono', monospace;
   }
 `
+
