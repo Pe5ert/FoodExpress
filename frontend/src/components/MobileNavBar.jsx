@@ -1,4 +1,5 @@
 import styled from 'styled-components'
+import { Link } from 'react-router-dom'
 import { Home, Search, ClipboardList, User } from 'lucide-react'
 
 const NavContainer = styled.nav`
@@ -19,7 +20,7 @@ const NavContainer = styled.nav`
   }
 `;
 
-const NavItem = styled.div`
+const NavItem = styled(Link)`
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -27,6 +28,7 @@ const NavItem = styled.div`
   color: ${props => props.$active ? '#FF6B35' : '#666'};
   cursor: pointer;
   transition: color 0.3s ease;
+  text-decoration: none;
 
   &:hover {
     color: #FF6B35;
@@ -41,19 +43,19 @@ const NavItem = styled.div`
 export default function MobileNavBar() {
   return (
     <NavContainer>
-      <NavItem $active>
+      <NavItem to="/" $active>
         <Home size={24} />
         <span>Início</span>
       </NavItem>
-      <NavItem>
+      <NavItem to="/">
         <Search size={24} />
         <span>Buscar</span>
       </NavItem>
-      <NavItem>
+      <NavItem to="/Restaurantes">
         <ClipboardList size={24} />
         <span>Pedidos</span>
       </NavItem>
-      <NavItem>
+      <NavItem to="/login">
         <User size={24} />
         <span>Perfil</span>
       </NavItem>
