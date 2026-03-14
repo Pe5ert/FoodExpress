@@ -89,8 +89,8 @@ const NavBarContainer = styled.nav`
 export default function NavBarCliente() {
   return (
     <NavBarContainer>
-      <div className="logo">
-         FoodExpress
+      <div>
+         <img src="../imgs/logo-FoodExpress.png" alt="Logo" />
       </div>
       <ul>
         <li><Link to="/">Início</Link></li>

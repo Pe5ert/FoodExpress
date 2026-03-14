@@ -1,337 +1,401 @@
-import { useState } from "react"
-import styled from "styled-components"
-
-const PageContainer = styled.div`
+import { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import styled from 'styled-components';
+ 
+const Page = styled.div`
   min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+`;
+ 
+const Left = styled.div`
+  background: linear-gradient(160deg, var(--secondary) 0%, #1a1640 60%, var(--accent) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 4rem;
+  position: relative;
+  overflow: hidden;
+ 
+  &::before {
+    content: '';
+    position: absolute;
+    bottom: -100px;
+    right: -100px;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(255,107,53,0.2) 0%, transparent 70%);
+    pointer-events: none;
+  }
+ 
+  @media (max-width: 900px) { display: none; }
+`;
+ 
+const LeftLogo = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 3rem;
+`;
+ 
+const LogoCircle = styled.div`
+  width: 44px;
+  height: 44px;
+  background: var(--primary);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #FFF8F5;
-  padding: 2rem;
-`
-
-const LoginCard = styled.div`
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 8px 30px rgba(46, 41, 78, 0.12);
-  padding: 2.5rem;
-  width: 100%;
-  max-width: 420px;
-  border: 1px solid rgba(46, 41, 78, 0.08);
-`
-
-const Logo = styled.div`
-  text-align: center;
-  margin-bottom: 2rem;
-
-  h1 {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 700;
-    font-size: 2rem;
-    color: #FF6B35;
-    margin-bottom: 0.25rem;
-  }
-
-  span {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.9rem;
-    color: #2E294E;
-    opacity: 0.7;
-  }
-`
-
-const Title = styled.h2`
-  font-family: 'Poppins', sans-serif;
-  font-weight: 700;
-  font-size: 1.5rem;
-  color: #2D3436;
-  text-align: center;
-  margin-bottom: 1.5rem;
-`
-
-const RoleSelector = styled.div`
-  display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-`
-
-const RoleButton = styled.button`
-  flex: 1;
-  padding: 0.75rem 0.5rem;
-  border: 2px solid ${props => props.$active ? '#FF6B35' : '#e0e0e0'};
-  background-color: ${props => props.$active ? '#FFF8F5' : 'white'};
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  font-size: 1.3rem;
+`;
+ 
+const LogoName = styled.span`
+  font-family: 'Sora', sans-serif;
+  font-weight: 800;
+  font-size: 1.4rem;
+  color: white;
+  letter-spacing: -0.5px;
+  span { color: var(--primary); }
+`;
+ 
+const LeftHeadline = styled.h1`
+  font-family: 'Sora', sans-serif;
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: white;
+  line-height: 1.15;
+  margin-bottom: 1rem;
+  letter-spacing: -1px;
+ 
+  span { color: var(--primary); }
+`;
+ 
+const LeftSub = styled.p`
+  color: rgba(255,255,255,0.6);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.6;
+  max-width: 340px;
+  margin-bottom: 3rem;
+`;
+ 
+const FeatList = styled.div`
   display: flex;
   flex-direction: column;
+  gap: 1rem;
+`;
+ 
+const FeatItem = styled.div`
+  display: flex;
   align-items: center;
-  gap: 0.4rem;
-
-  &:hover {
-    border-color: #FF6B35;
-    background-color: #FFF8F5;
-  }
-
+  gap: 0.75rem;
+  color: rgba(255,255,255,0.8);
+  font-size: 0.9rem;
+  font-weight: 600;
+ 
   .icon {
-    font-size: 1.5rem;
+    width: 36px;
+    height: 36px;
+    background: rgba(255,255,255,0.1);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.1rem;
   }
-
-  span {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: ${props => props.$active ? '#FF6B35' : '#2D3436'};
+`;
+ 
+const Right = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: #FAFAFA;
+ 
+  @media (max-width: 900px) {
+    background: linear-gradient(180deg, var(--secondary) 30%, #FAFAFA 30%);
+    align-items: flex-start;
+    padding: 2rem 1.25rem;
   }
-
-  &.cliente {
-    ${props => props.$active && `
-      background-color: rgba(255, 107, 53, 0.1);
-    `}
+`;
+ 
+const Card = styled.div`
+  background: white;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-xl);
+  padding: 2.5rem 2.25rem;
+  width: 100%;
+  max-width: 400px;
+  border: 1px solid var(--border);
+ 
+  @media (max-width: 900px) {
+    box-shadow: 0 16px 40px rgba(0,0,0,0.15);
   }
-
-  &.gerente {
-    ${props => props.$active && `
-      background-color: rgba(46, 41, 78, 0.1);
-    `}
+`;
+ 
+const MobileLogo = styled.div`
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 1.75rem;
+ 
+  @media (max-width: 900px) { display: flex; }
+ 
+  .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+  h2 {
+    font-family: 'Sora', sans-serif;
+    font-weight: 800;
+    font-size: 1.4rem;
+    color: var(--text-primary);
+    letter-spacing: -0.5px;
+    span { color: var(--primary); }
   }
-
-  &.funcionario {
-    ${props => props.$active && `
-      background-color: rgba(27, 153, 139, 0.1);
-    `}
-  }
-`
-
+`;
+ 
+const CardTitle = styled.h2`
+  font-family: 'Sora', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 0.4rem;
+  letter-spacing: -0.5px;
+`;
+ 
+const CardSub = styled.p`
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 2rem;
+`;
+ 
 const Form = styled.form`
   display: flex;
   flex-direction: column;
   gap: 1rem;
-`
-
-const InputGroup = styled.div`
+`;
+ 
+const Field = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-
+  gap: 0.4rem;
+ 
   label {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #2D3436;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: var(--text-secondary);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
   }
-`
-
+`;
+ 
 const Input = styled.input`
   width: 100%;
-  padding: 0.875rem 1rem;
-  border: 2px solid #e0e0e0;
-  border-radius: 10px;
-  font-family: 'Inter', sans-serif;
-  font-size: 1rem;
-  color: #2D3436;
-  transition: all 0.3s ease;
-  background-color: #fafafa;
-
+  padding: 0.875rem 1.1rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.95rem;
+  font-family: 'Nunito', sans-serif;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  transition: all 0.2s;
+  font-weight: 600;
+ 
   &:focus {
     outline: none;
-    border-color: #FF6B35;
-    background-color: white;
-    box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.1);
+    border-color: var(--primary);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(255,107,53,0.08);
   }
-
-  &::placeholder {
-    color: #a0a0a0;
-  }
-`
-
-const SubmitButton = styled.button`
+ 
+  &::placeholder { color: var(--text-muted); font-weight: 500; }
+`;
+ 
+const ForgotLink = styled.a`
+  font-size: 0.82rem;
+  color: var(--primary);
+  font-weight: 700;
+  text-align: right;
+  margin-top: -0.5rem;
+  cursor: pointer;
+  &:hover { text-decoration: underline; }
+`;
+ 
+const SubmitBtn = styled.button`
   width: 100%;
   padding: 1rem;
-  background-color: #FF6B35;
+  background: var(--primary);
   color: white;
   border: none;
-  border-radius: 10px;
-  font-family: 'Poppins', sans-serif;
+  border-radius: var(--radius-sm);
+  font-family: 'Sora', sans-serif;
   font-weight: 700;
   font-size: 1rem;
   cursor: pointer;
-  transition: all 0.3s ease;
-  margin-top: 0.5rem;
-
+  transition: all 0.2s;
+  margin-top: 0.25rem;
+ 
   &:hover {
-    background-color: #e55a2b;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(255, 107, 53, 0.3);
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(255,107,53,0.3);
   }
-
-  &:active {
-    transform: translateY(0);
-  }
-`
-
+ 
+  &:active { transform: translateY(0); }
+  &:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+`;
+ 
 const Divider = styled.div`
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin: 1.5rem 0;
-
+  margin: 1.25rem 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+ 
   &::before, &::after {
     content: '';
     flex: 1;
     height: 1px;
-    background-color: #e0e0e0;
+    background: var(--border);
   }
-
-  span {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.8rem;
-    color: #a0a0a0;
-  }
-`
-
-const RoleDescription = styled.p`
-  font-family: 'Inter', sans-serif;
-  font-size: 0.85rem;
-  color: #2E294E;
+`;
+ 
+const RegisterRow = styled.div`
   text-align: center;
-  margin-bottom: 1.5rem;
-  padding: 0.75rem;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  line-height: 1.5;
-`
-
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+ 
+  button {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-weight: 800;
+    font-size: 0.9rem;
+    font-family: 'Nunito', sans-serif;
+    cursor: pointer;
+    margin-left: 0.3rem;
+    &:hover { text-decoration: underline; }
+  }
+`;
+ 
+const StoreLink = styled.button`
+  width: 100%;
+  padding: 0.875rem;
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+ 
+  &:hover {
+    border-color: var(--secondary);
+    color: var(--secondary);
+    background: rgba(46,41,78,0.04);
+  }
+`;
+ 
 export default function Login() {
-  const [role, setRole] = useState("cliente")
-
-  const getRoleDescription = () => {
-    switch (role) {
-      case "cliente":
-        return "Faça pedidos dos seus restaurantes e mercados favoritos!"
-      case "gerente":
-        return "Gerencie seu restaurante, pedidos e cardápio."
-      case "funcionario":
-        return "Entregue pedidos e acompanhe suas entregas."
-      default:
-        return ""
-    }
-  }
-
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+ 
   const handleSubmit = (e) => {
-    e.preventDefault()
-    // Here you would handle authentication
-    console.log("Login attempt with role:", role)
-  }
-
+    e.preventDefault();
+    setLoading(true);
+    login(email, 'cliente');
+  };
+ 
   return (
-    <PageContainer>
-      <LoginCard>
-        <Logo>
-          <h1>FoodExpress</h1>
-          <span>Delivered with love</span>
-        </Logo>
-
-        <Title>Entrar</Title>
-
-        <RoleSelector>
-          <RoleButton 
-            type="button"
-            className="cliente"
-            $active={role === "cliente"} 
-            onClick={() => setRole("cliente")}
-          >
-            <span className="icon">🍽️</span>
-            <span>Cliente</span>
-          </RoleButton>
-          <RoleButton 
-            type="button"
-            className="gerente"
-            $active={role === "gerente"} 
-            onClick={() => setRole("gerente")}
-          >
-            <span className="icon">👨‍💼</span>
-            <span>Gerente</span>
-          </RoleButton>
-          <RoleButton 
-            type="button"
-            className="funcionario"
-            $active={role === "funcionario"} 
-            onClick={() => setRole("funcionario")}
-          >
-            <span className="icon">🛵</span>
-            <span>Entregador</span>
-          </RoleButton>
-        </RoleSelector>
-
-        <RoleDescription>
-          {getRoleDescription()}
-        </RoleDescription>
-
-        <Form onSubmit={handleSubmit}>
-          <InputGroup>
-            <label htmlFor="email">E-mail ou Telefone</label>
-            <Input 
-              id="email" 
-              type="text" 
-              placeholder="seu@email.com" 
-            />
-          </InputGroup>
-
-          <InputGroup>
-            <label htmlFor="password">Senha</label>
-            <Input 
-              id="password" 
-              type="password" 
-              placeholder="••••••••" 
-            />
-          </InputGroup>
-
-          <SubmitButton type="submit">
-            Entrar
-          </SubmitButton>
-        </Form>
-
-        <Divider>
-          <span>ou</span>
-        </Divider>
-
-        <div style={{ textAlign: 'center' }}>
-          <a 
-            href="#" 
-            style={{ 
-              fontFamily: "'Inter', sans-serif",
-              fontSize: '0.9rem', 
-              color: '#FF6B35',
-              textDecoration: 'none',
-              fontWeight: '600'
-            }}
-          >
-            Esqueceu sua senha?
-          </a>
-        </div>
-
-        <div style={{ 
-          textAlign: 'center', 
-          marginTop: '1.5rem',
-          fontFamily: "'Inter', sans-serif",
-          fontSize: '0.9rem',
-          color: '#2D3436'
-        }}>
-          Não tem uma conta? {' '}
-          <a 
-            href="#" 
-            style={{ 
-              color: '#1B998B',
-              textDecoration: 'none',
-              fontWeight: '600'
-            }}
-          >
-            Cadastre-se
-          </a>
-        </div>
-      </LoginCard>
-    </PageContainer>
-  )
+    <Page>
+      <Left>
+        <LeftLogo>
+          <LogoCircle>🍔</LogoCircle>
+          <LogoName>Food<span>Express</span></LogoName>
+        </LeftLogo>
+        <LeftHeadline>
+          Comida boa,<br />
+          entregue <span>rápido</span>
+        </LeftHeadline>
+        <LeftSub>
+          Acesse sua conta e descubra centenas de restaurantes e mercados prontos para entregar até você.
+        </LeftSub>
+        <FeatList>
+          <FeatItem><div className="icon">🚀</div> Entrega em até 30 minutos</FeatItem>
+          <FeatItem><div className="icon">🔒</div> Pagamento 100% seguro</FeatItem>
+          <FeatItem><div className="icon">⭐</div> Avalie e acompanhe seus pedidos</FeatItem>
+        </FeatList>
+      </Left>
+ 
+      <Right>
+        <Card>
+          <MobileLogo>
+            <div className="icon">🍔</div>
+            <h2>Food<span>Express</span></h2>
+          </MobileLogo>
+ 
+          <CardTitle>Bem-vindo de volta!</CardTitle>
+          <CardSub>Entre na sua conta para continuar</CardSub>
+ 
+          <Form onSubmit={handleSubmit}>
+            <Field>
+              <label>E-mail ou Telefone</label>
+              <Input
+                type="text"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+              />
+            </Field>
+            <Field>
+              <label>Senha</label>
+              <Input
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+              />
+            </Field>
+            <ForgotLink>Esqueceu a senha?</ForgotLink>
+            <SubmitBtn type="submit" disabled={loading}>
+              {loading ? 'Entrando...' : 'Entrar'}
+            </SubmitBtn>
+          </Form>
+ 
+          <Divider>ou</Divider>
+ 
+          <RegisterRow>
+            Não tem uma conta?
+            <button onClick={() => navigate('/register/user')}>Cadastre-se grátis</button>
+          </RegisterRow>
+ 
+          <div style={{ marginTop: '1.25rem' }}>
+            <StoreLink onClick={() => navigate('/register/store')}>
+              🏪 Cadastre seu restaurante ou mercado
+            </StoreLink>
+          </div>
+        </Card>
+      </Right>
+    </Page>
+  );
 }
-

@@ -4,31 +4,44 @@ import { MapPin, ChevronDown } from 'lucide-react'
 const Container = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background-color: #fff;
-  border-radius: 25px;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: box-shadow 0.3s ease;
+  box-shadow: var(--shadow-lg);
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+  min-width: 280px;
+  font-weight: 500;
 
   &:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+    border-color: var(--primary);
   }
 
   .icon {
-    color: #FF6B35;
+    color: var(--primary);
+    flex-shrink: 0;
   }
 
   .address {
     font-family: 'Inter', sans-serif;
-    font-size: 0.9rem;
-    color: #333;
-    font-weight: 500;
+    font-size: 1rem;
+    color: var(--text-primary);
+    font-weight: 600;
+    flex: 1;
   }
 
   .chevron {
-    color: #666;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+  }
+
+  &:hover .chevron {
+    transform: rotate(180deg);
   }
 `;
 

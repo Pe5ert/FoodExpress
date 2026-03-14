@@ -1,169 +1,313 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import styled from 'styled-components'
+import { useAuth } from '../contexts/AuthContext'
+import { LayoutDashboard, ShoppingBag, UtensilsCrossed, BarChart3, Users, Settings, LogOut, User, Store } from 'lucide-react'
 
-const NavBarContainer = styled.nav`
-  background: #2E294E;
-  padding: 1rem 2rem;
+const Wrapper = styled.header`
+  background: white;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  box-shadow: var(--shadow-sm);
+`
+
+const TopStrip = styled.div`
+  background: var(--secondary);
+  padding: 0.35rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 4px 12px rgba(31, 47, 61, 0.15);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  border-bottom: 3px solid #FF6B35;
 
-  .logo {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 700;
-    color: #FF6B35;
-    font-size: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+  @media (max-width: 768px) { display: none; }
+`
+
+const StripLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  .dot {
+    width: 7px;
+    height: 7px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulsar 2s infinite;
   }
 
-  .nav-content {
-    display: flex;
-    align-items: center;
-    gap: 3rem;
-    flex: 1;
-    margin-left: 3rem;
-
-    @media (max-width: 768px) {
-      gap: 1rem;
-      margin-left: 1rem;
-    }
-  }
-
-  ul {
-    list-style: none;
-    display: flex;
-    gap: 2rem;
-    margin: 0;
-    padding: 0;
-
-    @media (max-width: 768px) {
-      gap: 1rem;
-    }
-  }
-
-  a {
-    color: #fff;
-    text-decoration: none;
-    font-family: 'Inter', sans-serif;
+  span {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.7);
     font-weight: 600;
-    font-size: 0.95rem;
-    position: relative;
-    transition: color 0.3s ease;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-
-    &:hover {
-      color: #FF6B35;
-    }
-
-    &::after {
-      content: '';
-      position: absolute;
-      width: 0;
-      height: 3px;
-      bottom: -8px;
-      left: 0;
-      background-color: #FF6B35;
-      transition: width 0.3s ease;
-    }
-
-    &:hover::after {
-      width: 100%;
-    }
   }
 
-  .status-info {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-left: auto;
+  @keyframes pulsar {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+`
 
-    .restaurant-name {
-      font-family: 'Poppins', sans-serif;
+const StripRight = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+
+  span {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.6);
+    font-weight: 600;
+
+    strong {
+      color: rgba(255,255,255,0.9);
       font-weight: 700;
-      color: #1B998B;
-      font-size: 0.9rem;
-    }
-
-    .badge {
-      background-color: #1B998B;
-      color: #fff;
-      padding: 0.4rem 0.8rem;
-      border-radius: 6px;
-      font-family: 'Inter', sans-serif;
-      font-weight: 600;
-      font-size: 0.8rem;
     }
   }
+`
 
-  .user-menu {
+const Main = styled.div`
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 58px;
+
+  @media (max-width: 768px) {
+    padding: 0 1rem;
+    gap: 1rem;
+  }
+`
+
+const Logo = styled(Link)`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  margin-right: 2rem;
+`
+
+const LogoIcon = styled.div`
+  width: 34px;
+  height: 34px;
+  background: var(--primary);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+`
+
+const LogoText = styled.span`
+  font-family: 'Sora', sans-serif;
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: var(--secondary);
+  letter-spacing: -0.5px;
+  span { color: var(--primary); }
+
+  @media (max-width: 900px) { display: none; }
+`
+
+const GerenteBadge = styled.div`
+  background: rgba(46,41,78,0.08);
+  color: var(--secondary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-xs);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-left: -1rem;
+  margin-right: 2rem;
+
+  @media (max-width: 900px) { display: none; }
+`
+
+const Nav = styled.nav`
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 0.1rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+
+  @media (max-width: 768px) { display: none; }
+`
+
+const NavItem = styled(Link)`
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: ${p => p.$active ? 'var(--primary)' : 'var(--text-secondary)'};
+  background: ${p => p.$active ? 'var(--primary-light)' : 'none'};
+  border-radius: var(--radius-sm);
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &:hover {
+    color: var(--primary);
+    background: var(--primary-light);
+  }
+`
+
+const Actions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+  flex-shrink: 0;
+`
+
+const StoreName = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex-shrink: 0;
+
+  svg { color: var(--accent); }
+
+  @media (max-width: 900px) { display: none; }
+`
+
+const UserBtn = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  padding: 0.4rem 0.9rem 0.4rem 0.5rem;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: var(--primary);
+    background: var(--primary-light);
+  }
+
+  .avatar {
+    width: 28px;
+    height: 28px;
+    background: var(--secondary);
+    border-radius: 50%;
     display: flex;
     align-items: center;
-    gap: 1rem;
-    margin-left: 1.5rem;
-
-    button {
-      background-color: #FF6B35;
-      color: #fff;
-      border: none;
-      padding: 0.6rem 1.8rem;
-      border-radius: 25px;
-      cursor: pointer;
-      font-family: 'Inter', sans-serif;
-      font-weight: 600;
-      transition: background-color 0.3s ease, transform 0.2s ease;
-      font-size: 0.9rem;
-
-      &:hover {
-        background-color: #1B998B;
-        transform: translateY(-2px);
-      }
-
-      &.logout {
-        background-color: transparent;
-        border: 2px solid #FF6B35;
-        color: #FF6B35;
-
-        &:hover {
-          background-color: #FF6B35;
-          color: #fff;
-        }
-      }
-    }
+    justify-content: center;
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 700;
   }
-`;
+
+  .nome {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-primary);
+
+    @media (max-width: 480px) { display: none; }
+  }
+`
+
+const SairBtn = styled.button`
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: #FF4444;
+    color: #FF4444;
+    background: #fff5f5;
+  }
+`
+
+const links = [
+  { to: '/', label: 'Dashboard', Icon: LayoutDashboard },
+  { to: '/Pedidos', label: 'Pedidos', Icon: ShoppingBag },
+  { to: '/Menu', label: 'Cardápio', Icon: UtensilsCrossed },
+  { to: '/Relatorios', label: 'Relatórios', Icon: BarChart3 },
+  { to: '/Funcionarios', label: 'Equipe', Icon: Users },
+  { to: '/Configuracoes', label: 'Configurações', Icon: Settings },
+]
 
 export default function NavBarGerente() {
+  const { usuario, sair, logout } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  const nomeLoja = usuario?.loja?.nome || 'Minha Loja'
+  const nomeGerente = usuario?.nome || 'Gerente'
+
+  const handleSair = () => {
+    if (sair) sair()
+    else if (logout) logout()
+  }
+
   return (
-    <NavBarContainer>
-      <div className="logo">
-        FoodExpress
-      </div>
-      <div className="nav-content">
-        <ul>
-          <li><Link to="/">Dashboard</Link></li>
-          <li><Link to="/Pedidos">Pedidos</Link></li>
-          <li><Link to="/Menu">Menu</Link></li>
-          <li><Link to="/Relatorios">Relatórios</Link></li>
-          <li><Link to="/Funcionarios">Funcionários</Link></li>
-          <li><Link to="/Configuracoes">Configurações</Link></li>
-        </ul>
-      </div>
-      <div className="status-info">
-        <div className="restaurant-name">Seu Restaurante</div>
-        <div className="badge"> Ativo</div>
-      </div>
-      <div className="user-menu">
-        <button> Perfil</button>
-        <button className="logout">Sair</button>
-      </div>
-    </NavBarContainer>
+    <Wrapper>
+      <TopStrip>
+        <StripLeft>
+          <div className="dot" />
+          <span>Painel do Gerente • <strong>{nomeLoja}</strong></span>
+        </StripLeft>
+        <StripRight>
+          <span>Hoje: <strong>{new Date().toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })}</strong></span>
+          <span>Status: <strong style={{ color: 'var(--accent)' }}>Aberto</strong></span>
+        </StripRight>
+      </TopStrip>
+
+      <Main>
+        <Logo to="/">
+          <LogoIcon>🍔</LogoIcon>
+          <LogoText>Food<span>Express</span></LogoText>
+        </Logo>
+        <GerenteBadge>Gerente</GerenteBadge>
+
+        <Nav>
+          {links.map(({ to, label, Icon }) => (
+            <NavItem key={to} to={to} $active={location.pathname === to}>
+              <Icon size={15} />
+              {label}
+            </NavItem>
+          ))}
+        </Nav>
+
+        <Actions>
+          <StoreName>
+            <Store size={14} />
+            {nomeLoja}
+          </StoreName>
+
+          <UserBtn onClick={() => navigate('/perfil')}>
+            <div className="avatar">
+              {nomeGerente.charAt(0).toUpperCase()}
+            </div>
+            <span className="nome">{nomeGerente.split(' ')[0]}</span>
+          </UserBtn>
+
+          <SairBtn onClick={handleSair} title="Sair">
+            <LogOut size={15} />
+          </SairBtn>
+        </Actions>
+      </Main>
+    </Wrapper>
   )
 }
