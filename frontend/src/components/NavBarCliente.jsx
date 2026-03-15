@@ -1,8 +1,8 @@
-import { Link } from 'react-router-dom'
-import styled from 'styled-components'
+import { Link } from 'react-router-dom';
+import styled from 'styled-components';
 
 const NavBarContainer = styled.nav`
-  background-color: #FF6B35;
+  background-color: #ff6b35;
   padding: 1rem 2rem;
   display: flex;
   justify-content: space-between;
@@ -44,7 +44,7 @@ const NavBarContainer = styled.nav`
     transition: color 0.3s ease;
 
     &:hover {
-      color: #FFF8F5;
+      color: #fff8f5;
     }
 
     &::after {
@@ -54,7 +54,7 @@ const NavBarContainer = styled.nav`
       height: 2px;
       bottom: -5px;
       left: 0;
-      background-color: #1B998B;
+      background-color: #1b998b;
       transition: width 0.3s ease;
     }
 
@@ -69,7 +69,7 @@ const NavBarContainer = styled.nav`
     gap: 1rem;
 
     button {
-      background-color: #2E294E;
+      background-color: #2e294e;
       color: #fff;
       border: none;
       padding: 0.5rem 1.5rem;
@@ -80,7 +80,7 @@ const NavBarContainer = styled.nav`
       transition: background-color 0.3s ease;
 
       &:hover {
-        background-color: #1B998B;
+        background-color: #1b998b;
       }
     }
   }
@@ -90,17 +90,23 @@ export default function NavBarCliente() {
   return (
     <NavBarContainer>
       <div>
-         <img src="../imgs/logo-FoodExpress.png" alt="Logo" />
+        <img src="../imgs/logo-FoodExpress.png" alt="Logo" />
       </div>
       <ul>
-        <li><Link to="/">Início</Link></li>
-        <li><Link to="/Restaurantes">Restaurantes</Link></li>
-        <li><Link to="/Mercados">Mercados</Link></li>
+        <li>
+          <Link to="/">Início</Link>
+        </li>
+        <li>
+          <Link to="/Restaurantes">Restaurantes</Link>
+        </li>
+        <li>
+          <Link to="/Mercados">Mercados</Link>
+        </li>
       </ul>
       <div className="user-menu">
         <button>Meu Perfil</button>
         <button>Sair</button>
       </div>
     </NavBarContainer>
-  )
+  );
 }

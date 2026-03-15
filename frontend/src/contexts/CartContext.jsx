@@ -19,23 +19,26 @@ export function CartProvider({ children }) {
   }, [itens]);
 
   const adicionarItem = (item) => {
-    setItens(prev => {
-      const existente = prev.find(i => i.id === item.id);
+    setItens((prev) => {
+      const existente = prev.find((i) => i.id === item.id);
       if (existente) {
-        return prev.map(i => i.id === item.id ? { ...i, quantidade: i.quantidade + 1 } : i);
+        return prev.map((i) => (i.id === item.id ? { ...i, quantidade: i.quantidade + 1 } : i));
       }
       return [...prev, { ...item, quantidade: 1 }];
     });
   };
 
   const removerItem = (id) => {
-    setItens(prev => prev.filter(item => item.id !== id));
+    setItens((prev) => prev.filter((item) => item.id !== id));
   };
 
   const limparCarrinho = () => setItens([]);
 
   const quantidadeTotal = itens.reduce((soma, item) => soma + item.quantidade, 0);
-  const totalCarrinho = itens.reduce((soma, item) => soma + (item.preco || item.price || 0) * item.quantidade, 0);
+  const totalCarrinho = itens.reduce(
+    (soma, item) => soma + (item.preco || item.price || 0) * item.quantidade,
+    0
+  );
 
   // aliases em inglês para compatibilidade com componentes existentes
   const cartCount = quantidadeTotal;
@@ -52,7 +55,6 @@ export function CartProvider({ children }) {
     quantidadeTotal,
     totalCarrinho,
     carregando,
-    // aliases inglês
     cartCount,
     cartItems,
     cartTotal,

@@ -1,5 +1,5 @@
-import styled from 'styled-components'
-import { MapPin, ChevronDown } from 'lucide-react'
+import styled from 'styled-components';
+import { MapPin, ChevronDown } from 'lucide-react';
 
 const Container = styled.div`
   display: flex;
@@ -17,7 +17,7 @@ const Container = styled.div`
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
     border-color: var(--primary);
   }
 
@@ -52,6 +52,5 @@ export default function AddressSelector() {
       <span className="address">Av. Principal, 123</span>
       <ChevronDown size={16} className="chevron" />
     </Container>
-  )
+  );
 }
-

@@ -1,20 +1,20 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
-  --color-primary: #FF6B35;
+  --color-primary: #ff6b35;
   --color-primary-dark: #e55a2b;
   --color-primary-light: #fff1eb;
-  --color-secondary: #2E294E;
+  --color-secondary: #2e294e;
   --color-secondary-light: #3d3766;
-  --color-accent: #1B998B;
+  --color-accent: #1b998b;
   --color-accent-light: #e8f7f5;
-  --color-background: #F5F5F5;
-  --color-surface: #FFFFFF;
-  --color-surface-2: #FAFAFA;
-  --color-text-primary: #3E3E3E;
+  --color-background: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-surface-2: #fafafa;
+  --color-text-primary: #3e3e3e;
   --color-text-secondary: #717171;
-  --color-text-muted: #A0A0A0;
-  --color-border: #EBEBEB;
+  --color-text-muted: #a0a0a0;
+  --color-border: #ebebeb;
 
   --font-sans: 'Nunito', sans-serif;
   --font-display: 'Sora', sans-serif;
@@ -27,13 +27,17 @@
 }
 
 @layer base {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
   }
 
-  html, body, #root {
+  html,
+  body,
+  #root {
     height: 100%;
     min-height: 100vh;
     min-height: 100dvh;
@@ -41,8 +45,8 @@
 
   body {
     font-family: 'Nunito', sans-serif;
-    background-color: #F5F5F5;
-    color: #3E3E3E;
+    background-color: #f5f5f5;
+    color: #3e3e3e;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -52,7 +56,12 @@
     flex-direction: column;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     font-family: 'Sora', sans-serif;
     font-weight: 700;
     line-height: 1.2;
@@ -68,12 +77,24 @@
     cursor: pointer;
   }
 
-  input, select, textarea {
+  input,
+  select,
+  textarea {
     font-family: 'Nunito', sans-serif;
   }
 
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: #F5F5F5; }
-  ::-webkit-scrollbar-thumb { background: #D4D4D4; border-radius: 9999px; }
-  ::-webkit-scrollbar-thumb:hover { background: #A0A0A0; }
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #f5f5f5;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #d4d4d4;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #a0a0a0;
+  }
 }

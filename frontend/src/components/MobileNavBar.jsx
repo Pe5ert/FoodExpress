@@ -1,23 +1,23 @@
-import { Link, useLocation } from 'react-router-dom'
-import { useState } from 'react'
-import CartDrawer from './CartDrawer'
-import { Home, Search, ShoppingBag, User, LogIn } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
-import { useCart } from '../contexts/CartContext'
-import { motion, AnimatePresence } from 'framer-motion'
+import { Link, useLocation } from 'react-router-dom';
+import { useState } from 'react';
+import CartDrawer from './CartDrawer';
+import { Home, Search, ShoppingBag, User, LogIn } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function MobileNavBar() {
-  const { estaLogado, isLoggedIn } = useAuth()
-  const { cartCount } = useCart()
-  const [carrinhoAberto, setCarrinhoAberto] = useState(false)
-  const location = useLocation()
-  const logado = estaLogado || isLoggedIn
-  const ativo = (path) => location.pathname === path
+  const { estaLogado, isLoggedIn } = useAuth();
+  const { cartCount } = useCart();
+  const [carrinhoAberto, setCarrinhoAberto] = useState(false);
+  const location = useLocation();
+  const logado = estaLogado || isLoggedIn;
+  const ativo = (path) => location.pathname === path;
 
   const navItems = [
     { to: '/', label: 'Início', Icon: Home },
     { to: '/search', label: 'Buscar', Icon: Search },
-  ]
+  ];
 
   return (
     <>
@@ -28,8 +28,11 @@ export default function MobileNavBar() {
         transition={{ type: 'spring', damping: 25, stiffness: 260, delay: 0.3 }}
       >
         {navItems.map(({ to, label, Icon }) => (
-          <Link key={to} to={to}
-            className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl transition-all ${ativo(to) ? 'text-primary bg-primary-light' : 'text-text-muted'}`}>
+          <Link
+            key={to}
+            to={to}
+            className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl transition-all ${ativo(to) ? 'text-primary bg-primary-light' : 'text-text-muted'}`}
+          >
             <motion.div whileTap={{ scale: 0.85 }}>
               <Icon size={22} />
             </motion.div>
@@ -64,15 +67,23 @@ export default function MobileNavBar() {
 
         {/* Perfil / Login */}
         {logado ? (
-          <Link to="/perfil"
-            className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl transition-all ${ativo('/perfil') ? 'text-primary bg-primary-light' : 'text-text-muted'}`}>
-            <motion.div whileTap={{ scale: 0.85 }}><User size={22} /></motion.div>
+          <Link
+            to="/perfil"
+            className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl transition-all ${ativo('/perfil') ? 'text-primary bg-primary-light' : 'text-text-muted'}`}
+          >
+            <motion.div whileTap={{ scale: 0.85 }}>
+              <User size={22} />
+            </motion.div>
             <span className="text-[0.65rem] font-bold">Perfil</span>
           </Link>
         ) : (
-          <Link to="/login"
-            className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl transition-all ${ativo('/login') ? 'text-primary bg-primary-light' : 'text-text-muted'}`}>
-            <motion.div whileTap={{ scale: 0.85 }}><LogIn size={22} /></motion.div>
+          <Link
+            to="/login"
+            className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl transition-all ${ativo('/login') ? 'text-primary bg-primary-light' : 'text-text-muted'}`}
+          >
+            <motion.div whileTap={{ scale: 0.85 }}>
+              <LogIn size={22} />
+            </motion.div>
             <span className="text-[0.65rem] font-bold">Entrar</span>
           </Link>
         )}
@@ -80,5 +91,5 @@ export default function MobileNavBar() {
 
       <CartDrawer isOpen={carrinhoAberto} onClose={() => setCarrinhoAberto(false)} />
     </>
-  )
+  );
 }

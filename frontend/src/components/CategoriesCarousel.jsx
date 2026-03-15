@@ -1,5 +1,16 @@
-import { Utensils, ShoppingCart, Coffee, Pizza, Sandwich, Apple, Fish, IceCream, Beef, Salad } from 'lucide-react'
-import { motion } from 'framer-motion'
+import {
+  Utensils,
+  ShoppingCart,
+  Coffee,
+  Pizza,
+  Sandwich,
+  Apple,
+  Fish,
+  IceCream,
+  Beef,
+  Salad,
+} from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const categorias = [
   { Icon: Utensils, nome: 'Restaurantes', bg: '#FFE8D6' },
@@ -12,7 +23,7 @@ const categorias = [
   { Icon: IceCream, nome: 'Sobremesas', bg: '#F5D6FF' },
   { Icon: Beef, nome: 'Churrasco', bg: '#FFD6D6' },
   { Icon: Salad, nome: 'Saladas', bg: '#D6FFE8' },
-]
+];
 
 export default function CategoriesCarousel() {
   return (
@@ -34,7 +45,10 @@ export default function CategoriesCarousel() {
               whileHover={{ scale: 1.1, borderColor: '#FF6B35' }}
               transition={{ type: 'spring', stiffness: 400, damping: 20 }}
             >
-              <cat.Icon size={22} className="text-[#555] group-hover:text-primary transition-colors" />
+              <cat.Icon
+                size={22}
+                className="text-[#555] group-hover:text-primary transition-colors"
+              />
             </motion.div>
             <span className="text-[0.75rem] font-bold text-text-secondary text-center leading-tight group-hover:text-primary transition-colors">
               {cat.nome}
@@ -43,5 +57,5 @@ export default function CategoriesCarousel() {
         ))}
       </div>
     </div>
-  )
+  );
 }

@@ -16,20 +16,6 @@ O servidor está configurado para fazer proxy de `/api` para `http://localhost:8
 const response = await fetch('/api/suas-rotas');
 ```
 
-## Build para Produção
-
-```bash
-npm run build
-```
-
-Gera a build em `../public/app/` (pasta de produção do CodeIgniter)
-
-### Com script deploy:
-
-```bash
-npm run deploy
-```
-
 ## Estrutura
 
 ```
@@ -59,6 +45,6 @@ Configure em `src/` para chamar suas rotas:
 ```javascript
 // Exemplo
 fetch('/api/restaurantes')
-  .then(res => res.json())
-  .then(data => console.log(data))
+  .then((res) => res.json())
+  .then((data) => console.log(data));
 ```
