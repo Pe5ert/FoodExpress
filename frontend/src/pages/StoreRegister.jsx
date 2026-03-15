@@ -1,470 +1,143 @@
-import { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import styled from 'styled-components';
-import { useNavigate } from 'react-router-dom';
-import { Store, MapPin, Phone, User, Mail, Lock, Eye, EyeOff, ArrowLeft, ChevronRight, CheckCircle } from 'lucide-react';
-
-const Pagina = styled.div`
-  min-height: 100vh;
-  min-height: 100dvh;
-  background: #F5F5F5;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 2rem 1.25rem 4rem;
-`
-
-const Wrapper = styled.div`
-  width: 100%;
-  max-width: 540px;
-`
-
-const BotaoVoltar = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  font-weight: 700;
-  font-family: 'Nunito', sans-serif;
-  cursor: pointer;
-  padding: 0;
-  margin-bottom: 1.5rem;
-  transition: color 0.2s;
-  &:hover { color: var(--text-primary); }
-`
-
-const Cabecalho = styled.div`
-  text-align: center;
-  margin-bottom: 1.75rem;
-`
-
-const LogoLinha = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-  margin-bottom: 1.25rem;
-`
-
-const LogoIcone = styled.div`
-  width: 44px;
-  height: 44px;
-  background: var(--secondary);
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.4rem;
-`
-
-const LogoTexto = styled.span`
-  font-family: 'Sora', sans-serif;
-  font-weight: 800;
-  font-size: 1.3rem;
-  color: var(--text-primary);
-  span { color: var(--primary); }
-`
-
-const Titulo = styled.h1`
-  font-family: 'Sora', sans-serif;
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  margin-bottom: 0.4rem;
-  letter-spacing: -0.5px;
-`
-
-const Subtitulo = styled.p`
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  font-weight: 600;
-  max-width: 360px;
-  margin: 0 auto;
-  line-height: 1.5;
-`
-
-const ListaBeneficios = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  margin-bottom: 1.5rem;
-  padding: 1.25rem;
-  background: rgba(27,153,139,0.05);
-  border: 1px solid rgba(27,153,139,0.15);
-  border-radius: var(--radius-md);
-`
-
-const Beneficio = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text-secondary);
-  svg { color: var(--accent); flex-shrink: 0; }
-`
-
-const Card = styled.div`
-  background: white;
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  padding: 2rem 2.25rem;
-  border: 1px solid var(--border);
-  margin-bottom: 1rem;
-`
-
-const CabecalhoSecao = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border);
-
-  .caixa-icone {
-    width: 38px;
-    height: 38px;
-    background: ${p => p.$cor || 'var(--primary-light)'};
-    border-radius: var(--radius-sm);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: ${p => p.$corIcone || 'var(--primary)'};
-  }
-
-  h3 {
-    font-family: 'Sora', sans-serif;
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
-
-  p {
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    font-weight: 600;
-  }
-`
-
-const Grade = styled.div`
-  display: grid;
-  grid-template-columns: ${p => p.$colunas || '1fr'};
-  gap: 1rem;
-
-  @media (max-width: 500px) { grid-template-columns: 1fr; }
-`
-
-const Campo = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  ${p => p.$span && 'grid-column: 1 / -1;'}
-
-  label {
-    font-size: 0.78rem;
-    font-weight: 800;
-    color: var(--text-secondary);
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
-  }
-`
-
-const InputWrapper = styled.div`
-  position: relative;
-  display: flex;
-  align-items: center;
-
-  svg.icone {
-    position: absolute;
-    left: 0.9rem;
-    color: var(--text-muted);
-    pointer-events: none;
-  }
-
-  button.toggle-senha {
-    position: absolute;
-    right: 0.875rem;
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    padding: 0;
-    &:hover { color: var(--text-primary); }
-  }
-`
-
-const Input = styled.input`
-  width: 100%;
-  padding: 0.8rem 1rem 0.8rem 2.5rem;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-  font-family: 'Nunito', sans-serif;
-  color: var(--text-primary);
-  background: var(--surface-2);
-  transition: all 0.2s;
-  font-weight: 600;
-
-  &:focus {
-    outline: none;
-    border-color: var(--secondary);
-    background: white;
-    box-shadow: 0 0 0 3px rgba(46,41,78,0.06);
-  }
-  &::placeholder { color: var(--text-muted); font-weight: 500; }
-`
-
-const Select = styled.select`
-  width: 100%;
-  padding: 0.8rem 1rem 0.8rem 2.5rem;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-  font-family: 'Nunito', sans-serif;
-  color: var(--text-primary);
-  background: var(--surface-2);
-  transition: all 0.2s;
-  font-weight: 600;
-  cursor: pointer;
-  appearance: none;
-
-  &:focus {
-    outline: none;
-    border-color: var(--secondary);
-    background: white;
-    box-shadow: 0 0 0 3px rgba(46,41,78,0.06);
-  }
-`
-
-const LinhaTermos = styled.div`
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-  margin-top: 0.25rem;
-
-  input[type="checkbox"] {
-    margin-top: 3px;
-    accent-color: var(--secondary);
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-    cursor: pointer;
-  }
-
-  label {
-    font-size: 0.82rem;
-    color: var(--text-secondary);
-    font-weight: 600;
-    line-height: 1.4;
-    cursor: pointer;
-    a { color: var(--secondary); font-weight: 700; }
-  }
-`
-
-const BotaoEnviar = styled.button`
-  width: 100%;
-  padding: 1rem;
-  background: var(--secondary);
-  color: white;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-family: 'Sora', sans-serif;
-  font-weight: 700;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-
-  &:hover {
-    background: var(--secondary-light);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 16px rgba(46,41,78,0.3);
-  }
-  &:disabled { background: #ccc; cursor: not-allowed; transform: none; }
-`
+import { useState } from 'react'
+import { useAuth } from '../contexts/AuthContext'
+import { useNavigate } from 'react-router-dom'
+import { Store, MapPin, Phone, User, Mail, Lock, Eye, EyeOff, ArrowLeft, ChevronRight, CheckCircle } from 'lucide-react'
+import logoSrc from '../imgs/Logo-site.png'
 
 export default function CadastroLoja() {
-  const [dados, setDados] = useState({
-    nomeLoja: '', tipoLoja: '', enderecoLoja: '', telefoneLoja: '',
-    nomeDono: '', emailDono: '', telefoneDono: '', cpfDono: '', senha: '',
-  });
-  const [mostrarSenha, setMostrarSenha] = useState(false);
-  const [carregando, setCarregando] = useState(false);
-  const [aceitouTermos, setAceitouTermos] = useState(false);
-  const { cadastrarGerente, signupGerente } = useAuth();
-  const navigate = useNavigate();
+  const [dados, setDados] = useState({ nomeLoja: '', tipoLoja: '', enderecoLoja: '', telefoneLoja: '', nomeDono: '', emailDono: '', telefoneDono: '', cpfDono: '', senha: '' })
+  const [mostrarSenha, setMostrarSenha] = useState(false)
+  const [carregando, setCarregando] = useState(false)
+  const [aceitouTermos, setAceitouTermos] = useState(false)
+  const { cadastrarGerente, signupGerente } = useAuth()
+  const navigate = useNavigate()
 
   const handleEnviar = (e) => {
-    e.preventDefault();
-    if (!aceitouTermos) return;
-    setCarregando(true);
-    const fn = cadastrarGerente || signupGerente;
-    fn({
-      storeName: dados.nomeLoja, storeAddress: dados.enderecoLoja,
-      storePhone: dados.telefoneLoja, ownerName: dados.nomeDono,
-      ownerEmail: dados.emailDono, ownerPhone: dados.telefoneDono, password: dados.senha,
-    });
-  };
+    e.preventDefault()
+    if (!aceitouTermos) return
+    setCarregando(true)
+    const fn = cadastrarGerente || signupGerente
+    fn({ storeName: dados.nomeLoja, storeAddress: dados.enderecoLoja, storePhone: dados.telefoneLoja, ownerName: dados.nomeDono, ownerEmail: dados.emailDono, ownerPhone: dados.telefoneDono, password: dados.senha })
+  }
 
-  const handleChange = (e) => setDados({ ...dados, [e.target.name]: e.target.value });
+  const handleChange = (e) => setDados({ ...dados, [e.target.name]: e.target.value })
+
+  const inputBase = "w-full pl-10 pr-4 py-3 border border-border rounded-xl text-sm font-semibold text-text-primary bg-surface-2 outline-none transition-all focus:border-secondary focus:bg-white focus:shadow-[0_0_0_3px_rgba(46,41,78,0.06)] placeholder:text-text-muted placeholder:font-normal"
+
+  const Campo = ({ label, name, type = 'text', placeholder, Icon, span }) => (
+    <div className={`flex flex-col gap-1.5 ${span ? 'col-span-2 sm:col-span-1' : ''}`}>
+      <label className="text-xs font-extrabold text-text-secondary uppercase tracking-wide">{label} *</label>
+      <div className="relative">
+        <Icon size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+        <input name={name} type={type} placeholder={placeholder} onChange={handleChange} required className={inputBase} />
+      </div>
+    </div>
+  )
 
   return (
-    <Pagina>
-      <Wrapper>
-        <BotaoVoltar onClick={() => navigate('/register/user')}>
+    <div className="min-h-screen bg-background flex items-start justify-center p-4 sm:p-6 pb-16">
+      <div className="w-full max-w-135">
+
+        <button onClick={() => navigate('/register/user')}
+          className="flex items-center gap-1.5 text-text-muted text-sm font-bold bg-transparent border-none cursor-pointer mb-6 hover:text-text-primary transition-colors">
           <ArrowLeft size={15} /> Voltar
-        </BotaoVoltar>
+        </button>
 
-        <Cabecalho>
-          <LogoLinha>
-            <LogoIcone>🏪</LogoIcone>
-            <LogoTexto>Food<span>Express</span></LogoTexto>
-          </LogoLinha>
-          <Titulo>Cadastre seu estabelecimento</Titulo>
-          <Subtitulo>Alcance novos clientes e gerencie seus pedidos em um só lugar</Subtitulo>
-        </Cabecalho>
+        <div className="text-center mb-6">
+          <img src={logoSrc} alt="FoodExpress" className="h-10 w-auto mx-auto mb-5" />
+          <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-text-primary mb-1.5 tracking-tight">Cadastre seu estabelecimento</h1>
+          <p className="text-sm text-text-muted font-semibold max-w-90 mx-auto leading-relaxed">Alcance novos clientes e gerencie seus pedidos em um só lugar</p>
+        </div>
 
-        <ListaBeneficios>
-          <Beneficio><CheckCircle size={16} /> Painel de controle completo e gratuito</Beneficio>
-          <Beneficio><CheckCircle size={16} /> Receba pedidos online 24h por dia</Beneficio>
-          <Beneficio><CheckCircle size={16} /> Relatórios de venda em tempo real</Beneficio>
-        </ListaBeneficios>
+        {/* Benefícios */}
+        <div className="bg-accent/5 border border-accent/15 rounded-2xl p-5 mb-4 flex flex-col gap-2.5">
+          {['Painel de controle completo e gratuito', 'Receba pedidos online 24h por dia', 'Relatórios de venda em tempo real'].map(t => (
+            <div key={t} className="flex items-center gap-2.5 text-sm font-bold text-text-secondary">
+              <CheckCircle size={16} className="text-accent shrink-0" /> {t}
+            </div>
+          ))}
+        </div>
 
         <form onSubmit={handleEnviar}>
-          <Card>
-            <CabecalhoSecao $cor="rgba(255,107,53,0.1)" $corIcone="var(--primary)">
-              <div className="caixa-icone"><Store size={18} /></div>
+          {/* Card loja */}
+          <div className="bg-white rounded-2xl shadow-lg border border-border p-6 sm:p-8 mb-4">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border">
+              <div className="w-10 h-10 bg-primary-light rounded-xl flex items-center justify-center text-primary shrink-0"><Store size={18} /></div>
               <div>
-                <h3>Dados do Estabelecimento</h3>
-                <p>Informações que os clientes verão</p>
+                <h3 className="font-display text-base font-bold text-text-primary">Dados do Estabelecimento</h3>
+                <p className="text-xs text-text-muted font-semibold">Informações que os clientes verão</p>
               </div>
-            </CabecalhoSecao>
+            </div>
 
-            <Grade $colunas="1fr 1fr">
-              <Campo $span>
-                <label>Nome do estabelecimento *</label>
-                <InputWrapper>
-                  <Store size={15} className="icone" />
-                  <Input name="nomeLoja" type="text" placeholder="Ex: Pizzaria do João" onChange={handleChange} required />
-                </InputWrapper>
-              </Campo>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Campo label="Nome do estabelecimento" name="nomeLoja" placeholder="Ex: Pizzaria do João" Icon={Store} span />
 
-              <Campo>
-                <label>Tipo *</label>
-                <InputWrapper>
-                  <Store size={15} className="icone" />
-                  <Select name="tipoLoja" onChange={handleChange} required>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-extrabold text-text-secondary uppercase tracking-wide">Tipo *</label>
+                <div className="relative">
+                  <Store size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none z-10" />
+                  <select name="tipoLoja" onChange={handleChange} required className={inputBase + " appearance-none cursor-pointer"}>
                     <option value="">Selecione</option>
-                    <option value="restaurante">🍽️ Restaurante</option>
-                    <option value="pizzaria">🍕 Pizzaria</option>
-                    <option value="lanchonete">🍔 Lanchonete</option>
-                    <option value="mercado">🛒 Mercado</option>
-                    <option value="farmacia">💊 Farmácia</option>
-                    <option value="outros">📦 Outros</option>
-                  </Select>
-                </InputWrapper>
-              </Campo>
-
-              <Campo>
-                <label>Telefone da loja *</label>
-                <InputWrapper>
-                  <Phone size={15} className="icone" />
-                  <Input name="telefoneLoja" type="tel" placeholder="(11) 99999-9999" onChange={handleChange} required />
-                </InputWrapper>
-              </Campo>
-
-              <Campo $span>
-                <label>Endereço completo *</label>
-                <InputWrapper>
-                  <MapPin size={15} className="icone" />
-                  <Input name="enderecoLoja" type="text" placeholder="Rua, número, bairro, cidade" onChange={handleChange} required />
-                </InputWrapper>
-              </Campo>
-            </Grade>
-          </Card>
-
-          <Card>
-            <CabecalhoSecao $cor="rgba(46,41,78,0.08)" $corIcone="var(--secondary)">
-              <div className="caixa-icone"><User size={18} /></div>
-              <div>
-                <h3>Dados do Responsável</h3>
-                <p>Informações do proprietário ou gerente</p>
+                    <option>🍽️ Restaurante</option>
+                    <option>🍕 Pizzaria</option>
+                    <option>🍔 Lanchonete</option>
+                    <option>🛒 Mercado</option>
+                    <option>💊 Farmácia</option>
+                    <option>📦 Outros</option>
+                  </select>
+                </div>
               </div>
-            </CabecalhoSecao>
 
-            <Grade $colunas="1fr 1fr">
-              <Campo $span>
-                <label>Nome completo *</label>
-                <InputWrapper>
-                  <User size={15} className="icone" />
-                  <Input name="nomeDono" type="text" placeholder="Seu nome completo" onChange={handleChange} required />
-                </InputWrapper>
-              </Campo>
+              <Campo label="Telefone da loja" name="telefoneLoja" type="tel" placeholder="(11) 99999-9999" Icon={Phone} />
+              <Campo label="Endereço completo" name="enderecoLoja" placeholder="Rua, número, bairro, cidade" Icon={MapPin} span />
+            </div>
+          </div>
 
-              <Campo>
-                <label>E-mail *</label>
-                <InputWrapper>
-                  <Mail size={15} className="icone" />
-                  <Input name="emailDono" type="email" placeholder="seu@email.com" onChange={handleChange} required />
-                </InputWrapper>
-              </Campo>
+          {/* Card dono */}
+          <div className="bg-white rounded-2xl shadow-lg border border-border p-6 sm:p-8">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border">
+              <div className="w-10 h-10 bg-secondary/8 rounded-xl flex items-center justify-center text-secondary shrink-0"><User size={18} /></div>
+              <div>
+                <h3 className="font-display text-base font-bold text-text-primary">Dados do Responsável</h3>
+                <p className="text-xs text-text-muted font-semibold">Informações do proprietário ou gerente</p>
+              </div>
+            </div>
 
-              <Campo>
-                <label>Telefone *</label>
-                <InputWrapper>
-                  <Phone size={15} className="icone" />
-                  <Input name="telefoneDono" type="tel" placeholder="(11) 99999-9999" onChange={handleChange} required />
-                </InputWrapper>
-              </Campo>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Campo label="Nome completo" name="nomeDono" placeholder="Seu nome completo" Icon={User} span />
+              <Campo label="E-mail" name="emailDono" type="email" placeholder="seu@email.com" Icon={Mail} />
+              <Campo label="Telefone" name="telefoneDono" type="tel" placeholder="(11) 99999-9999" Icon={Phone} />
+              <Campo label="CPF" name="cpfDono" placeholder="000.000.000-00" Icon={User} />
 
-              <Campo>
-                <label>CPF *</label>
-                <InputWrapper>
-                  <User size={15} className="icone" />
-                  <Input name="cpfDono" type="text" placeholder="000.000.000-00" onChange={handleChange} required />
-                </InputWrapper>
-              </Campo>
-
-              <Campo>
-                <label>Senha de acesso *</label>
-                <InputWrapper>
-                  <Lock size={15} className="icone" />
-                  <Input
-                    name="senha"
-                    type={mostrarSenha ? 'text' : 'password'}
-                    placeholder="Mínimo 8 caracteres"
-                    onChange={handleChange}
-                    required
-                    style={{ paddingRight: '2.75rem' }}
-                  />
-                  <button type="button" className="toggle-senha" onClick={() => setMostrarSenha(s => !s)}>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-extrabold text-text-secondary uppercase tracking-wide">Senha *</label>
+                <div className="relative">
+                  <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                  <input name="senha" type={mostrarSenha ? 'text' : 'password'} placeholder="Mínimo 8 caracteres" onChange={handleChange} required
+                    className="w-full pl-10 pr-12 py-3 border border-border rounded-xl text-sm font-semibold text-text-primary bg-surface-2 outline-none transition-all focus:border-secondary focus:bg-white focus:shadow-[0_0_0_3px_rgba(46,41,78,0.06)] placeholder:text-text-muted placeholder:font-normal" />
+                  <button type="button" onClick={() => setMostrarSenha(s => !s)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted bg-transparent border-none cursor-pointer hover:text-text-primary">
                     {mostrarSenha ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
-                </InputWrapper>
-              </Campo>
-            </Grade>
+                </div>
+              </div>
+            </div>
 
-            <LinhaTermos style={{ marginTop: '1.25rem' }}>
-              <input type="checkbox" id="termos-loja" checked={aceitouTermos} onChange={e => setAceitouTermos(e.target.checked)} />
-              <label htmlFor="termos-loja">
-                Concordo com os <a href="#">Termos para Parceiros</a> e autorizo o processamento dos meus dados conforme a <a href="#">Política de Privacidade</a>
-              </label>
-            </LinhaTermos>
+            <label className="flex items-start gap-2.5 cursor-pointer mt-5">
+              <input type="checkbox" checked={aceitouTermos} onChange={e => setAceitouTermos(e.target.checked)}
+                className="mt-0.5 w-4 h-4 accent-secondary shrink-0 cursor-pointer" />
+              <span className="text-xs text-text-secondary font-semibold leading-snug">
+                Concordo com os <a href="#" className="text-secondary font-bold hover:underline">Termos para Parceiros</a> e autorizo o processamento conforme a <a href="#" className="text-secondary font-bold hover:underline">Política de Privacidade</a>
+              </span>
+            </label>
 
-            <BotaoEnviar type="submit" disabled={carregando || !aceitouTermos} style={{ marginTop: '1.5rem' }}>
+            <button type="submit" disabled={carregando || !aceitouTermos}
+              className="mt-6 w-full py-4 bg-secondary text-white border-none rounded-xl font-display font-bold text-base cursor-pointer transition-all flex items-center justify-center gap-2 hover:bg-secondary-light hover:-translate-y-px hover:shadow-lg disabled:bg-border disabled:text-text-muted disabled:cursor-not-allowed disabled:translate-y-0">
               {carregando ? 'Cadastrando...' : (<>Cadastrar estabelecimento <ChevronRight size={18} /></>)}
-            </BotaoEnviar>
-          </Card>
+            </button>
+          </div>
         </form>
-      </Wrapper>
-    </Pagina>
-  );
+      </div>
+    </div>
+  )
 }

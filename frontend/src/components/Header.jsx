@@ -1,279 +1,10 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import CartDrawer from './CartDrawer'
-import styled from 'styled-components'
 import { useAuth } from '../contexts/AuthContext'
 import { useCart } from '../contexts/CartContext'
-import { Search, MapPin, ChevronDown, LogIn, ShoppingBag, User, LogOut } from 'lucide-react'
+import { Search, MapPin, ChevronDown, LogIn, ShoppingBag, User, LogOut, Menu, X } from 'lucide-react'
 import logoSrc from '../imgs/Logo-site.png'
-
-const Barra = styled.header`
-  background: #fff;
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 200;
-`
-
-const Linha = styled.div`
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 1.5rem;
-  height: 72px;
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-
-  @media (max-width: 768px) {
-    padding: 0 1rem;
-    gap: 0.75rem;
-  }
-`
-
-const Logo = styled(Link)`
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-`
-
-const LogoImg = styled.img`
-  height: 52px;
-  width: auto;
-  object-fit: contain;
-  display: block;
-
-  @media (max-width: 480px) {
-    height: 44px;
-  }
-`
-
-const Nav = styled.nav`
-  display: flex;
-  align-items: center;
-
-  @media (max-width: 960px) { display: none; }
-`
-
-const NavLink = styled(Link)`
-  padding: 0 0.9rem;
-  height: 72px;
-  display: flex;
-  align-items: center;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: ${p => p.$ativo ? 'var(--primary)' : 'var(--text-secondary)'};
-  border-bottom: 2.5px solid ${p => p.$ativo ? 'var(--primary)' : 'transparent'};
-  transition: all 0.15s;
-  white-space: nowrap;
-
-  &:hover {
-    color: var(--primary);
-    border-bottom-color: var(--primary);
-  }
-`
-
-const Busca = styled.form`
-  flex: 1;
-  max-width: 420px;
-  display: flex;
-  align-items: center;
-  background: var(--surface-2);
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-full);
-  padding: 0 1rem;
-  height: 42px;
-  gap: 0.5rem;
-  transition: all 0.2s;
-
-  &:focus-within {
-    border-color: var(--primary);
-    background: #fff;
-    box-shadow: 0 0 0 3px rgba(255,107,53,0.08);
-  }
-
-  input {
-    flex: 1;
-    background: none;
-    border: none;
-    outline: none;
-    font-size: 0.9rem;
-    font-family: 'Nunito', sans-serif;
-    font-weight: 600;
-    color: var(--text-primary);
-    &::placeholder { color: var(--text-muted); font-weight: 500; }
-  }
-
-  svg { color: var(--text-muted); flex-shrink: 0; }
-
-  @media (max-width: 768px) { display: none; }
-`
-
-const Localizacao = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0.4rem 0.6rem;
-  border-radius: var(--radius-sm);
-  transition: background 0.15s;
-  flex-shrink: 0;
-
-  &:hover { background: var(--primary-light); }
-
-  .texto {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-
-    .rotulo {
-      font-family: 'Nunito', sans-serif;
-      font-size: 0.68rem;
-      color: var(--text-muted);
-      font-weight: 600;
-      line-height: 1;
-    }
-
-    .local {
-      font-family: 'Nunito', sans-serif;
-      font-size: 0.85rem;
-      font-weight: 800;
-      color: var(--text-primary);
-      max-width: 120px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      line-height: 1.3;
-    }
-  }
-
-  @media (max-width: 600px) {
-    .texto { display: none; }
-  }
-`
-
-const Acoes = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin-left: auto;
-  flex-shrink: 0;
-`
-
-const BotaoIcone = styled.button`
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: none;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.15s;
-  position: relative;
-
-  &:hover {
-    background: var(--primary-light);
-    color: var(--primary);
-  }
-`
-
-const BotaoEntrar = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: none;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-full);
-  padding: 0.5rem 1.1rem;
-  font-family: 'Nunito', sans-serif;
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-
-  &:hover {
-    border-color: var(--primary);
-    color: var(--primary);
-    background: var(--primary-light);
-  }
-`
-
-const BotaoCarrinho = styled.button`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: none;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-full);
-  padding: 0.45rem 0.9rem 0.45rem 0.65rem;
-  cursor: pointer;
-  transition: all 0.15s;
-  position: relative;
-
-  &:hover {
-    border-color: var(--primary);
-    background: var(--primary-light);
-  }
-
-  .icone-wrap {
-    position: relative;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-primary);
-
-    .badge {
-      position: absolute;
-      top: -4px;
-      right: -4px;
-      background: var(--primary);
-      color: white;
-      border-radius: 99px;
-      min-width: 14px;
-      height: 14px;
-      font-size: 0.58rem;
-      font-weight: 800;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0 2px;
-      border: 1.5px solid white;
-    }
-  }
-`
-
-const InfoCarrinho = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-
-  .valor {
-    font-family: 'Sora', sans-serif;
-    font-size: 0.8rem;
-    font-weight: 800;
-    color: var(--text-primary);
-    line-height: 1;
-  }
-
-  .qtd {
-    font-family: 'Nunito', sans-serif;
-    font-size: 0.68rem;
-    color: var(--text-muted);
-    font-weight: 600;
-    line-height: 1.3;
-  }
-
-  @media (max-width: 480px) { display: none; }
-`
 
 export default function Header() {
   const { estaLogado, isLoggedIn, usuario, sair, logout } = useAuth()
@@ -282,10 +13,12 @@ export default function Header() {
   const location = useLocation()
   const [busca, setBusca] = useState('')
   const [carrinhoAberto, setCarrinhoAberto] = useState(false)
+  const [menuMobile, setMenuMobile] = useState(false)
 
   const logado = estaLogado || isLoggedIn
   const total = totalCarrinho || cartTotal || 0
   const qtd = cartCount || 0
+  const ativo = (path) => location.pathname === path
 
   const handleBusca = (e) => {
     e.preventDefault()
@@ -293,91 +26,155 @@ export default function Header() {
   }
 
   const handleSair = () => {
-    if (sair) sair()
-    else if (logout) logout()
+    if (sair) sair(); else if (logout) logout()
+    setMenuMobile(false)
   }
 
-  const ativo = (path) => location.pathname === path
+  const navLinks = [
+    { to: '/', label: 'Início' },
+    { to: '/Restaurantes', label: 'Restaurantes' },
+    { to: '/Mercados', label: 'Mercados' },
+    { to: '/Restaurantes', label: 'Bebidas' },
+    { to: '/Mercados', label: 'Farmácias' },
+  ]
 
   return (
-    <Barra>
-      <Linha>
-        <Logo to="/">
-          <LogoImg src={logoSrc} alt="FoodExpress" />
-        </Logo>
+    <>
+      <header className="bg-white border-b border-border sticky top-0 z-50">
+        <div className="max-w-320 mx-auto px-4 sm:px-6 h-18 flex items-center gap-3 sm:gap-6">
 
-        <Nav>
-          <NavLink to="/" $ativo={ativo('/')}>Início</NavLink>
-          <NavLink to="/Restaurantes" $ativo={ativo('/Restaurantes')}>Restaurantes</NavLink>
-          <NavLink to="/Mercados" $ativo={ativo('/Mercados')}>Mercados</NavLink>
-          <NavLink to="/Restaurantes">Bebidas</NavLink>
-          <NavLink to="/Mercados">Farmácias</NavLink>
-        </Nav>
+          {/* Logo */}
+          <Link to="/" className="flex-shrink-0">
+            <img src={logoSrc} alt="FoodExpress" className="h-12 sm:h-13 w-auto object-contain" />
+          </Link>
 
-        <Busca onSubmit={handleBusca}>
-          <Search size={16} />
-          <input
-            type="text"
-            placeholder="Busque por item ou loja"
-            value={busca}
-            onChange={e => setBusca(e.target.value)}
-          />
-        </Busca>
+          {/* Nav desktop */}
+          <nav className="hidden lg:flex items-center">
+            {navLinks.map(({ to, label }) => {
+              const eAtivo = ativo(to) && label !== 'Bebidas' && label !== 'Farmácias'
+              return (
+                <Link key={label} to={to}
+                  className={`px-3 h-18 flex items-center text-sm font-bold transition-all whitespace-nowrap border-b-2 ${
+                    eAtivo ? 'text-primary border-primary' : 'text-text-secondary border-transparent hover:text-primary hover:border-primary'
+                  }`}
+                >{label}</Link>
+              )
+            })}
+          </nav>
 
-        <Localizacao>
-          <MapPin size={18} color="var(--primary)" />
-          <div className="texto">
-            <span className="rotulo">Próximo de</span>
-            <span className="local">Tauape</span>
+          {/* Busca */}
+          <form onSubmit={handleBusca}
+            className="flex-1 hidden md:flex items-center bg-surface-2 border border-border rounded-full px-4 h-11 gap-2 transition-all focus-within:border-primary focus-within:bg-white focus-within:shadow-[0_0_0_3px_rgba(255,107,53,0.08)]"
+          >
+            <Search size={16} className="text-text-muted flex-shrink-0" />
+            <input type="text" placeholder="Busque por item ou loja" value={busca}
+              onChange={e => setBusca(e.target.value)}
+              className="flex-1 bg-transparent border-none outline-none text-sm font-semibold text-text-primary placeholder:text-text-muted placeholder:font-normal min-w-0"
+            />
+          </form>
+
+          {/* Localização — só desktop grande */}
+          <button className="hidden xl:flex items-center gap-1.5 px-2 py-1.5 rounded-xl transition-all hover:bg-primary-light flex-shrink-0 cursor-pointer border-none bg-transparent">
+            <MapPin size={18} className="text-primary" />
+            <div className="flex flex-col items-start">
+              <span className="text-[0.68rem] text-text-muted font-semibold leading-none">Próximo de</span>
+              <span className="text-sm font-extrabold text-text-primary leading-tight">Tauape</span>
+            </div>
+            <ChevronDown size={14} className="text-text-muted" />
+          </button>
+
+          {/* Ações */}
+          <div className="flex items-center gap-1.5 ml-auto flex-shrink-0">
+            {/* Botão hamburguer mobile */}
+            <button
+              onClick={() => setMenuMobile(m => !m)}
+              className="lg:hidden w-10 h-10 rounded-full border-none bg-transparent flex items-center justify-center text-text-secondary cursor-pointer hover:bg-primary-light hover:text-primary transition-all"
+            >
+              {menuMobile ? <X size={20} /> : <Menu size={20} />}
+            </button>
+
+            {logado ? (
+              <>
+                <button onClick={() => navigate('/perfil')}
+                  className="hidden sm:flex w-10 h-10 rounded-full border-none bg-transparent items-center justify-center text-text-secondary cursor-pointer transition-all hover:bg-primary-light hover:text-primary"
+                ><User size={20} /></button>
+
+                <button onClick={() => setCarrinhoAberto(true)}
+                  className="flex items-center gap-2 bg-transparent border border-border rounded-full py-2 pr-3 pl-2.5 cursor-pointer transition-all hover:border-primary hover:bg-primary-light"
+                >
+                  <div className="relative w-5 h-5 flex items-center justify-center text-text-primary">
+                    <ShoppingBag size={18} />
+                    {qtd > 0 && <span className="absolute -top-1.5 -right-1.5 bg-primary text-white rounded-full min-w-3.5 h-3.5 text-[0.55rem] font-extrabold flex items-center justify-center px-px border border-white">{qtd}</span>}
+                  </div>
+                  <div className="hidden sm:flex flex-col items-start">
+                    <span className="font-display text-xs font-extrabold text-text-primary leading-none">R$ {total.toFixed(2)}</span>
+                    <span className="text-[0.65rem] text-text-muted font-semibold leading-snug">{qtd} {qtd === 1 ? 'item' : 'itens'}</span>
+                  </div>
+                </button>
+
+                <button onClick={handleSair}
+                  className="hidden sm:flex w-10 h-10 rounded-full border-none bg-transparent items-center justify-center text-text-secondary cursor-pointer transition-all hover:bg-red-50 hover:text-red-500"
+                ><LogOut size={18} /></button>
+              </>
+            ) : (
+              <>
+                <button onClick={() => setCarrinhoAberto(true)}
+                  className="flex items-center gap-2 bg-transparent border border-border rounded-full py-2 pr-3 pl-2.5 cursor-pointer transition-all hover:border-primary hover:bg-primary-light"
+                >
+                  <div className="relative w-5 h-5 flex items-center justify-center text-text-primary">
+                    <ShoppingBag size={18} />
+                    {qtd > 0 && <span className="absolute -top-1.5 -right-1.5 bg-primary text-white rounded-full min-w-3.5 h-3.5 text-[0.55rem] font-extrabold flex items-center justify-center px-px border border-white">{qtd}</span>}
+                  </div>
+                </button>
+
+                <button onClick={() => navigate('/login')}
+                  className="hidden sm:flex items-center gap-1.5 bg-transparent border border-border rounded-full px-4 py-2 text-sm font-bold text-text-primary cursor-pointer transition-all hover:border-primary hover:text-primary hover:bg-primary-light whitespace-nowrap"
+                ><LogIn size={15} /> Entrar</button>
+              </>
+            )}
           </div>
-          <ChevronDown size={14} color="var(--text-muted)" />
-        </Localizacao>
+        </div>
 
-        <Acoes>
-          {logado ? (
-            <>
-              <BotaoIcone onClick={() => navigate('/perfil')} title="Meu perfil">
-                <User size={20} />
-              </BotaoIcone>
+        {/* Menu mobile dropdown */}
+        {menuMobile && (
+          <div className="lg:hidden border-t border-border bg-white px-4 py-3 flex flex-col gap-1">
+            {/* Busca mobile */}
+            <form onSubmit={handleBusca} className="flex items-center bg-surface-2 border border-border rounded-full px-4 h-10 gap-2 mb-2 focus-within:border-primary">
+              <Search size={15} className="text-text-muted flex-shrink-0" />
+              <input type="text" placeholder="Busque por item ou loja" value={busca}
+                onChange={e => setBusca(e.target.value)}
+                className="flex-1 bg-transparent border-none outline-none text-sm font-semibold text-text-primary placeholder:text-text-muted placeholder:font-normal min-w-0"
+              />
+            </form>
 
-              <BotaoCarrinho onClick={() => setCarrinhoAberto(true)}>
-                <div className="icone-wrap">
-                  <ShoppingBag size={20} />
-                  {qtd > 0 && <span className="badge">{qtd}</span>}
-                </div>
-                <InfoCarrinho>
-                  <span className="valor">R$ {total.toFixed(2)}</span>
-                  <span className="qtd">{qtd} {qtd === 1 ? 'item' : 'itens'}</span>
-                </InfoCarrinho>
-              </BotaoCarrinho>
+            {navLinks.map(({ to, label }) => (
+              <Link key={label} to={to}
+                onClick={() => setMenuMobile(false)}
+                className={`px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${ativo(to) ? 'text-primary bg-primary-light' : 'text-text-secondary hover:text-primary hover:bg-primary-light'}`}
+              >{label}</Link>
+            ))}
 
-              <BotaoIcone onClick={handleSair} title="Sair">
-                <LogOut size={18} />
-              </BotaoIcone>
-            </>
-          ) : (
-            <>
-              <BotaoCarrinho onClick={() => setCarrinhoAberto(true)}>
-                <div className="icone-wrap">
-                  <ShoppingBag size={20} />
-                  {qtd > 0 && <span className="badge">{qtd}</span>}
-                </div>
-                <InfoCarrinho>
-                  <span className="valor">R$ {total.toFixed(2)}</span>
-                  <span className="qtd">{qtd} {qtd === 1 ? 'item' : 'itens'}</span>
-                </InfoCarrinho>
-              </BotaoCarrinho>
-
-              <BotaoEntrar onClick={() => navigate('/login')}>
-                <LogIn size={16} />
-                Entrar
-              </BotaoEntrar>
-            </>
-          )}
-        </Acoes>
-      </Linha>
+            <div className="border-t border-border mt-1 pt-2 flex gap-2">
+              {logado ? (
+                <>
+                  <button onClick={() => { navigate('/perfil'); setMenuMobile(false) }}
+                    className="flex-1 py-2.5 bg-surface-2 border border-border rounded-xl text-sm font-bold text-text-primary cursor-pointer hover:bg-primary-light hover:border-primary transition-all flex items-center justify-center gap-1.5"
+                  ><User size={16} /> Perfil</button>
+                  <button onClick={handleSair}
+                    className="flex-1 py-2.5 bg-red-50 border border-red-200 rounded-xl text-sm font-bold text-red-500 cursor-pointer hover:bg-red-100 transition-all flex items-center justify-center gap-1.5"
+                  ><LogOut size={16} /> Sair</button>
+                </>
+              ) : (
+                <button onClick={() => { navigate('/login'); setMenuMobile(false) }}
+                  className="flex-1 py-2.5 bg-primary text-white border-none rounded-xl text-sm font-bold cursor-pointer hover:bg-primary-dark transition-all flex items-center justify-center gap-1.5"
+                ><LogIn size={16} /> Entrar</button>
+              )}
+            </div>
+          </div>
+        )}
+      </header>
 
       <CartDrawer isOpen={carrinhoAberto} onClose={() => setCarrinhoAberto(false)} />
-    </Barra>
+    </>
   )
 }

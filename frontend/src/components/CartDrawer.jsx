@@ -1,341 +1,162 @@
-import styled from 'styled-components'
-import { useCart } from '../contexts/CartContext';
-import { X, Trash2, ShoppingBag, ArrowRight, Minus, Plus } from 'lucide-react';
-import { useEffect } from 'react';
- 
-const Overlay = styled.div`
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.45);
-  z-index: 1000;
-  backdrop-filter: blur(2px);
-`;
- 
-const Drawer = styled.div`
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  max-width: 400px;
-  background: white;
-  z-index: 1001;
-  transform: translateX(${p => p.$open ? '0' : '100%'});
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  flex-direction: column;
-  box-shadow: -8px 0 40px rgba(0,0,0,0.15);
-`;
- 
-const DrawerHead = styled.div`
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: white;
-`;
- 
-const HeadLeft = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
- 
-  .icon {
-    width: 38px;
-    height: 38px;
-    background: var(--primary-light);
-    border-radius: var(--radius-sm);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--primary);
-  }
- 
-  h3 {
-    font-family: 'Sora', sans-serif;
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
- 
-  span {
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    font-weight: 600;
-  }
-`;
- 
-const CloseBtn = styled.button`
-  width: 34px;
-  height: 34px;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius-full);
-  background: none;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  &:hover { border-color: #ccc; background: var(--surface-2); }
-`;
- 
-const Body = styled.div`
-  flex: 1;
-  overflow-y: auto;
-  padding: 1.25rem 1.5rem;
-`;
- 
-const EmptyBox = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  min-height: 200px;
-  text-align: center;
-  gap: 0.75rem;
-  color: var(--text-muted);
- 
-  .emoji { font-size: 3rem; }
-  h4 { font-family: 'Sora', sans-serif; font-size: 1rem; font-weight: 700; color: var(--text-secondary); }
-  p { font-size: 0.85rem; font-weight: 600; }
-`;
- 
-const Item = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 0;
-  border-bottom: 1px solid var(--border);
- 
-  &:last-child { border-bottom: none; }
-`;
- 
-const ItemImg = styled.div`
-  width: 56px;
-  height: 56px;
-  background: ${p => p.$bg || 'var(--surface-2)'};
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.75rem;
-  flex-shrink: 0;
-  border: 1px solid var(--border);
-`;
- 
-const ItemInfo = styled.div`
-  flex: 1;
-  min-width: 0;
- 
-  h4 {
-    font-weight: 700;
-    font-size: 0.9rem;
-    color: var(--text-primary);
-    margin-bottom: 0.2rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
- 
-  .price {
-    font-family: 'Sora', sans-serif;
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: var(--primary);
-  }
-`;
- 
-const QtyControl = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
- 
-  button {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    border: 1.5px solid var(--border);
-    background: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: var(--text-secondary);
-    transition: all 0.2s;
-    padding: 0;
- 
-    &:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
-  }
- 
-  span {
-    font-size: 0.9rem;
-    font-weight: 800;
-    color: var(--text-primary);
-    min-width: 16px;
-    text-align: center;
-  }
-`;
- 
-const RemoveBtn = styled.button`
-  width: 28px;
-  height: 28px;
-  border: none;
-  background: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-xs);
-  transition: all 0.2s;
-  flex-shrink: 0;
-  &:hover { color: #FF4444; background: #fff5f5; }
-`;
- 
-const FooterBox = styled.div`
-  padding: 1.25rem 1.5rem;
-  border-top: 1px solid var(--border);
-  background: white;
-`;
- 
-const SubtotalRow = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-`;
- 
-const TotalRow = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.25rem;
- 
-  span:first-child {
-    font-family: 'Sora', sans-serif;
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--text-primary);
-  }
- 
-  span:last-child {
-    font-family: 'Sora', sans-serif;
-    font-size: 1.2rem;
-    font-weight: 800;
-    color: var(--primary);
-  }
-`;
- 
-const CheckoutBtn = styled.button`
-  width: 100%;
-  padding: 1rem;
-  background: var(--primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-family: 'Sora', sans-serif;
-  font-size: 0.95rem;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  transition: all 0.2s;
- 
-  &:hover {
-    background: var(--primary-dark);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 16px rgba(255,107,53,0.3);
-  }
- 
-  &:disabled {
-    background: var(--border);
-    color: var(--text-muted);
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-  }
-`;
- 
+import { useCart } from '../contexts/CartContext'
+import { X, Trash2, ShoppingBag, ArrowRight } from 'lucide-react'
+import { useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+
 export default function CartDrawer({ isOpen, onClose }) {
-  const { cartItems, removeFromCart, cartTotal } = useCart();
- 
+  const { cartItems, removeFromCart, cartTotal } = useCart()
+
   useEffect(() => {
-    const handle = (e) => { if (e.key === 'Escape') onClose(); };
-    if (isOpen) document.addEventListener('keydown', handle);
-    return () => document.removeEventListener('keydown', handle);
-  }, [isOpen, onClose]);
- 
-  if (!isOpen) return null;
- 
+    const handle = (e) => { if (e.key === 'Escape') onClose() }
+    if (isOpen) {
+      document.addEventListener('keydown', handle)
+      document.body.style.overflow = 'hidden'
+    }
+    return () => {
+      document.removeEventListener('keydown', handle)
+      document.body.style.overflow = ''
+    }
+  }, [isOpen, onClose])
+
   return (
-    <>
-      <Overlay onClick={onClose} />
-      <Drawer $open={isOpen}>
-        <DrawerHead>
-          <HeadLeft>
-            <div className="icon"><ShoppingBag size={18} /></div>
-            <div>
-              <h3>Meu Carrinho</h3>
-              <span>{cartItems.length} {cartItems.length === 1 ? 'item' : 'itens'}</span>
-            </div>
-          </HeadLeft>
-          <CloseBtn onClick={onClose}><X size={16} /></CloseBtn>
-        </DrawerHead>
- 
-        <Body>
-          {cartItems.length === 0 ? (
-            <EmptyBox>
-              <div className="emoji">🛒</div>
-              <h4>Carrinho vazio</h4>
-              <p>Adicione itens para fazer seu pedido</p>
-            </EmptyBox>
-          ) : (
-            cartItems.map((item, i) => (
-              <Item key={item.id}>
-                <ItemImg>{item.emoji || '🍕'}</ItemImg>
-                <ItemInfo>
-                  <h4>{item.name}</h4>
-                  <span className="price">R$ {item.price.toFixed(2)}</span>
-                </ItemInfo>
-                <RemoveBtn onClick={() => removeFromCart(item.id)}>
-                  <Trash2 size={15} />
-                </RemoveBtn>
-              </Item>
-            ))
-          )}
-        </Body>
- 
-        <FooterBox>
-          <SubtotalRow>
-            <span>Subtotal</span>
-            <span>R$ {cartTotal.toFixed(2)}</span>
-          </SubtotalRow>
-          <SubtotalRow>
-            <span>Taxa de entrega</span>
-            <span style={{ color: 'var(--accent)', fontWeight: 700 }}>Grátis</span>
-          </SubtotalRow>
-          <div style={{ height: '1px', background: 'var(--border)', margin: '0.75rem 0' }} />
-          <TotalRow>
-            <span>Total</span>
-            <span>R$ {cartTotal.toFixed(2)}</span>
-          </TotalRow>
-          <CheckoutBtn
-            onClick={() => { alert('Ir para checkout!'); onClose(); }}
-            disabled={cartItems.length === 0}
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Overlay */}
+          <motion.div
+            className="fixed inset-0 bg-black/45 backdrop-blur-sm z-[100]"
+            onClick={onClose}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          />
+
+          {/* Mobile: bottom sheet | Desktop: side drawer */}
+          <motion.div
+            className="fixed z-[101] bg-white flex flex-col
+              bottom-0 left-0 right-0 w-full rounded-t-3xl max-h-[90dvh]
+              md:top-0 md:bottom-0 md:left-auto md:right-0 md:w-100 md:max-h-none md:rounded-none
+              shadow-[0_-4px_40px_rgba(0,0,0,0.15)] md:shadow-[-8px_0_40px_rgba(0,0,0,0.15)]"
+            initial={{ y: '100%', opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: '100%', opacity: 0 }}
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            // No desktop, anima da direita
+            style={{}}
           >
-            Finalizar pedido <ArrowRight size={18} />
-          </CheckoutBtn>
-        </FooterBox>
-      </Drawer>
-    </>
-  );
+            {/* Versão desktop — sobrescreve animação para vir da direita */}
+            <style>{`
+              @media (min-width: 768px) {
+                .cart-drawer-inner {
+                  transform: none !important;
+                }
+              }
+            `}</style>
+
+            {/* Alça — só mobile */}
+            <div className="md:hidden flex justify-center pt-3 pb-1 flex-shrink-0">
+              <div className="w-10 h-1 bg-border rounded-full" />
+            </div>
+
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-border flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-primary-light rounded-xl flex items-center justify-center text-primary">
+                  <ShoppingBag size={17} />
+                </div>
+                <div>
+                  <h3 className="font-display text-base font-bold text-text-primary leading-tight">Meu Carrinho</h3>
+                  <span className="text-xs text-text-muted font-semibold">
+                    {cartItems.length} {cartItems.length === 1 ? 'item' : 'itens'}
+                  </span>
+                </div>
+              </div>
+              <button onClick={onClose}
+                className="w-8 h-8 border border-border rounded-full bg-transparent flex items-center justify-center text-text-secondary cursor-pointer transition-all hover:bg-surface-2">
+                <X size={15} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-5 py-4 overscroll-contain">
+              {cartItems.length === 0 ? (
+                <motion.div
+                  className="flex flex-col items-center justify-center py-12 text-center gap-3"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.15 }}
+                >
+                  <div className="text-5xl">🛒</div>
+                  <h4 className="font-display text-base font-bold text-text-secondary">Carrinho vazio</h4>
+                  <p className="text-sm font-semibold text-text-muted">Adicione itens para fazer seu pedido</p>
+                </motion.div>
+              ) : (
+                <AnimatePresence initial={false}>
+                  {cartItems.map((item, i) => (
+                    <motion.div
+                      key={item.id}
+                      className="flex items-center gap-3 py-3.5 border-b border-border last:border-none"
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20, height: 0, paddingTop: 0, paddingBottom: 0 }}
+                      transition={{ duration: 0.2, delay: i * 0.05 }}
+                    >
+                      <div className="w-12 h-12 bg-surface-2 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 border border-border">
+                        {item.emoji || '🍕'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-sm text-text-primary mb-0.5 truncate">{item.name}</h4>
+                        <span className="font-display text-sm font-bold text-primary">
+                          R$ {(item.price || 0).toFixed(2)}
+                        </span>
+                      </div>
+                      <motion.button
+                        onClick={() => removeFromCart(item.id)}
+                        className="w-7 h-7 border-none bg-transparent text-text-muted cursor-pointer flex items-center justify-center rounded-md hover:text-red-500 hover:bg-red-50 flex-shrink-0"
+                        whileTap={{ scale: 0.85 }}
+                      >
+                        <Trash2 size={14} />
+                      </motion.button>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              )}
+            </div>
+
+            {/* Footer */}
+            <motion.div
+              className="px-5 py-4 border-t border-border bg-white flex-shrink-0 pb-[calc(1rem+env(safe-area-inset-bottom))]"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <div className="flex justify-between items-center mb-1.5 text-sm font-semibold text-text-secondary">
+                <span>Subtotal</span><span>R$ {(cartTotal || 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center mb-3 text-sm font-semibold text-text-secondary">
+                <span>Taxa de entrega</span>
+                <span className="text-accent font-bold">Grátis</span>
+              </div>
+              <div className="h-px bg-border mb-3" />
+              <div className="flex justify-between items-center mb-4">
+                <span className="font-display text-base font-bold text-text-primary">Total</span>
+                <span className="font-display text-xl font-extrabold text-primary">R$ {(cartTotal || 0).toFixed(2)}</span>
+              </div>
+              <motion.button
+                onClick={() => { alert('Ir para checkout!'); onClose() }}
+                disabled={cartItems.length === 0}
+                className="w-full py-4 bg-primary text-white border-none rounded-xl font-display text-base font-bold cursor-pointer flex items-center justify-center gap-2 disabled:bg-border disabled:text-text-muted disabled:cursor-not-allowed"
+                whileHover={{ scale: 1.02, boxShadow: '0 4px 20px rgba(255,107,53,0.35)' }}
+                whileTap={{ scale: 0.98 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+              >
+                Finalizar pedido <ArrowRight size={18} />
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  )
 }

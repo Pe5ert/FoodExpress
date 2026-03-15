@@ -1,242 +1,60 @@
-import styled from 'styled-components';
-import { Instagram, Facebook, Youtube, Twitter, Mail, Phone, MapPin } from 'lucide-react';
- 
-const FooterWrap = styled.footer`
-  background: var(--secondary);
-  color: rgba(255,255,255,0.75);
-  margin-top: 4rem;
-`;
- 
-const TopSection = styled.div`
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 3.5rem 2rem 2.5rem;
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1fr;
-  gap: 3rem;
- 
-  @media (max-width: 900px) {
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-  }
- 
-  @media (max-width: 560px) {
-    grid-template-columns: 1fr;
-    gap: 2rem;
-    padding: 2.5rem 1.25rem 2rem;
-  }
-`;
- 
-const Brand = styled.div``;
- 
-const BrandLogo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin-bottom: 1rem;
- 
-  .icon {
-    width: 38px;
-    height: 38px;
-    background: var(--primary);
-    border-radius: var(--radius-sm);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-  }
- 
-  span {
-    font-family: 'Sora', sans-serif;
-    font-weight: 800;
-    font-size: 1.3rem;
-    color: white;
-    letter-spacing: -0.5px;
-    em { color: var(--primary); font-style: normal; }
-  }
-`;
- 
-const BrandDesc = styled.p`
-  font-size: 0.875rem;
-  line-height: 1.7;
-  margin-bottom: 1.5rem;
-  max-width: 280px;
-`;
- 
-const Socials = styled.div`
-  display: flex;
-  gap: 0.75rem;
- 
-  a {
-    width: 36px;
-    height: 36px;
-    background: rgba(255,255,255,0.08);
-    border-radius: var(--radius-sm);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: rgba(255,255,255,0.6);
-    transition: all 0.2s;
- 
-    &:hover {
-      background: var(--primary);
-      color: white;
-      transform: translateY(-2px);
-    }
-  }
-`;
- 
-const ContactItems = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  margin-top: 1.5rem;
-`;
- 
-const ContactItem = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-size: 0.82rem;
-  font-weight: 600;
- 
-  svg { color: var(--primary); flex-shrink: 0; }
-`;
- 
-const Column = styled.div`
-  h4 {
-    font-family: 'Sora', sans-serif;
-    font-size: 0.82rem;
-    font-weight: 800;
-    color: white;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 1.25rem;
-  }
- 
-  ul {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 0.7rem;
-  }
- 
-  a {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: rgba(255,255,255,0.6);
-    transition: all 0.2s;
- 
-    &:hover {
-      color: white;
-      padding-left: 4px;
-    }
-  }
-`;
- 
-const BottomBar = styled.div`
-  border-top: 1px solid rgba(255,255,255,0.08);
-  padding: 1.25rem 2rem;
-  max-width: 1280px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
- 
-  p {
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: rgba(255,255,255,0.4);
-  }
- 
-  .badges {
-    display: flex;
-    gap: 0.5rem;
-  }
- 
-  .badge {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
-    padding: 0.35rem 0.7rem;
-    border-radius: var(--radius-xs);
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: rgba(255,255,255,0.5);
-    letter-spacing: 0.3px;
-  }
- 
-  @media (max-width: 560px) { padding: 1.25rem; }
-`;
- 
+import { Instagram, Facebook, Youtube, Twitter, Mail, Phone, MapPin } from 'lucide-react'
+import logoSrc from '../imgs/Logo-site.png'
+
 export default function Footer() {
   return (
-    <FooterWrap>
-      <TopSection>
-        <Brand>
-          <BrandLogo>
-            <div className="icon">🍔</div>
-            <span>Food<em>Express</em></span>
-          </BrandLogo>
-          <BrandDesc>
-            Conectamos você aos melhores restaurantes e mercados da sua região. Peça online e receba em casa com rapidez e praticidade.
-          </BrandDesc>
-          <Socials>
-            <a href="#"><Instagram size={16} /></a>
-            <a href="#"><Facebook size={16} /></a>
-            <a href="#"><Youtube size={16} /></a>
-            <a href="#"><Twitter size={16} /></a>
-          </Socials>
-          <ContactItems>
-            <ContactItem><Mail size={14} /> suporte@foodexpress.com.br</ContactItem>
-            <ContactItem><Phone size={14} /> (11) 3000-0000</ContactItem>
-            <ContactItem><MapPin size={14} /> São Paulo, SP</ContactItem>
-          </ContactItems>
-        </Brand>
- 
-        <Column>
-          <h4>Para clientes</h4>
-          <ul>
-            <li><a href="#">Como funciona</a></li>
-            <li><a href="#">Rastrear pedido</a></li>
-            <li><a href="#">Meus pedidos</a></li>
-            <li><a href="#">Promoções</a></li>
-            <li><a href="#">FoodExpress Pass</a></li>
-          </ul>
-        </Column>
- 
-        <Column>
-          <h4>Para parceiros</h4>
-          <ul>
-            <li><a href="#">Cadastrar loja</a></li>
-            <li><a href="#">Portal do parceiro</a></li>
-            <li><a href="#">Seja entregador</a></li>
-            <li><a href="#">Suporte parceiro</a></li>
-          </ul>
-        </Column>
- 
-        <Column>
-          <h4>Empresa</h4>
-          <ul>
-            <li><a href="#">Sobre nós</a></li>
-            <li><a href="#">Carreiras</a></li>
-            <li><a href="#">Imprensa</a></li>
-            <li><a href="#">Blog</a></li>
-            <li><a href="#">Termos de uso</a></li>
-            <li><a href="#">Privacidade</a></li>
-          </ul>
-        </Column>
-      </TopSection>
- 
-      <BottomBar>
-        <p>© 2026 FoodExpress. Todos os direitos reservados.</p>
-        <div className="badges">
-          <span className="badge">SSL Seguro</span>
-          <span className="badge">LGPD</span>
-          <span className="badge">PCI DSS</span>
+    <footer className="bg-secondary text-white/75 mt-16">
+      <div className="max-w-320 mx-auto px-8 pt-14 pb-10 grid grid-cols-[2fr_1fr_1fr_1fr] gap-12 lg:grid-cols-2 md:grid-cols-1 md:gap-8 md:px-5">
+
+        <div>
+          <div className="flex items-center gap-2.5 mb-4">
+            <img src={logoSrc} alt="FoodExpress" className="h-10 w-auto brightness-0 invert" />
+          </div>
+          <p className="text-[0.875rem] leading-relaxed mb-6 max-w-70 opacity-80">Conectamos você aos melhores restaurantes e mercados da sua região. Peça online e receba em casa.</p>
+          <div className="flex gap-3 mb-6">
+            {[Instagram, Facebook, Youtube, Twitter].map((Icon, i) => (
+              <a key={i} href="#" className="w-9 h-9 bg-white/8 rounded-xl flex items-center justify-center text-white/60 transition-all hover:bg-primary hover:text-white hover:-translate-y-0.5">
+                <Icon size={16} />
+              </a>
+            ))}
+          </div>
+          <div className="flex flex-col gap-2">
+            {[
+              { Icon: Mail, text: 'suporte@foodexpress.com.br' },
+              { Icon: Phone, text: '(11) 3000-0000' },
+              { Icon: MapPin, text: 'São Paulo, SP' },
+            ].map(({ Icon, text }) => (
+              <div key={text} className="flex items-center gap-2 text-[0.82rem] font-semibold">
+                <Icon size={14} className="text-primary flex-shrink-0" />{text}
+              </div>
+            ))}
+          </div>
         </div>
-      </BottomBar>
-    </FooterWrap>
-  );
+
+        {[
+          { titulo: 'Para clientes', links: ['Como funciona', 'Rastrear pedido', 'Meus pedidos', 'Promoções', 'FoodExpress Pass'] },
+          { titulo: 'Para parceiros', links: ['Cadastrar loja', 'Portal do parceiro', 'Seja entregador', 'Suporte parceiro'] },
+          { titulo: 'Empresa', links: ['Sobre nós', 'Carreiras', 'Imprensa', 'Blog', 'Termos de uso', 'Privacidade'] },
+        ].map(({ titulo, links }) => (
+          <div key={titulo}>
+            <h4 className="font-['Sora'] text-[0.82rem] font-extrabold text-white uppercase tracking-widest mb-5">{titulo}</h4>
+            <ul className="flex flex-col gap-2.5">
+              {links.map(l => (
+                <li key={l}><a href="#" className="text-[0.875rem] font-semibold text-white/60 transition-all hover:text-white hover:pl-1">{l}</a></li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      <div className="border-t border-white/8 max-w-320 mx-auto px-8 py-5 flex items-center justify-between flex-wrap gap-4 md:px-5">
+        <p className="text-[0.82rem] font-semibold opacity-40">© 2026 FoodExpress. Todos os direitos reservados.</p>
+        <div className="flex gap-2">
+          {['SSL Seguro', 'LGPD', 'PCI DSS'].map(b => (
+            <span key={b} className="bg-white/6 border border-white/10 px-2.5 py-1 rounded-md text-[0.72rem] font-bold text-white/50 tracking-wide">{b}</span>
+          ))}
+        </div>
+      </div>
+    </footer>
+  )
 }
