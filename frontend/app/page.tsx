@@ -15,13 +15,13 @@ export default function Home() {
 
           <div className="space-y-3 mb-8">
             <Link
-              href="/(auth)/login"
+              href="/sign-in"
               className="block bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 px-6 rounded-lg transition-colors text-lg"
             >
               🔑 Fazer Login
             </Link>
             <Link
-              href="/(auth)/cadastro"
+              href="/sign-up"
               className="block bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg transition-colors text-lg"
             >
               ✏️ Criar Conta

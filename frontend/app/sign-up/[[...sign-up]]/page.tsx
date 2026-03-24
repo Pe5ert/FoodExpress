@@ -10,7 +10,7 @@ export default function CadastroPage() {
         <p className="text-center text-gray-600 mb-8">
           Crie sua conta para começar
         </p>
-        <SignUp routing="hash" />
+        <SignUp />
       </div>
     </div>
   );

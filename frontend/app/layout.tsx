@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
-import { AuthProvider } from '@/app/(auth)/AuthContext'
 import './globals.css'
 
 export const metadata: Metadata = {
