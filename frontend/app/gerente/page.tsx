@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import LogoutButton from '../../components/LogoutButton'
+import { TrocarPerfilButton } from '../../components/TrocarPerfilButton'
 
 export default function GerentePage() {
   return (
@@ -14,6 +15,7 @@ export default function GerentePage() {
               <p className="font-semibold">Admin</p>
               <p className="text-sm text-gray-600">Gerente</p>  
             </div>
+            <TrocarPerfilButton />
             <LogoutButton />
           </div>
         </div>

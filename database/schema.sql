@@ -179,6 +179,22 @@ CREATE TABLE disputas (
     FOREIGN KEY (operador_responsavel_id) REFERENCES operadores(id)
 );
 
+-- Tabela de tickets (suporte)
+CREATE TABLE tickets (
+    id TEXT PRIMARY KEY,
+    cliente_id TEXT NOT NULL,
+    titulo TEXT NOT NULL,
+    descricao TEXT NOT NULL,
+    categoria TEXT NOT NULL,
+    pedido_id TEXT,
+    status TEXT DEFAULT 'aberto',
+    prioridade TEXT DEFAULT 'normal',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id),
+    FOREIGN KEY (pedido_id) REFERENCES pedidos(id)
+);
+
 -- Tabela de relatórios gerenciais
 CREATE TABLE relatorios_cache (
     id TEXT PRIMARY KEY,

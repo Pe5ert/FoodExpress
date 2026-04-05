@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import LogoutButton from '../../components/LogoutButton'
+import { TrocarPerfilButton } from '../../components/TrocarPerfilButton'
 
 interface Entregador {
   id: string
@@ -138,7 +139,7 @@ export default function EntregadorPage() {
               <p className="text-sm text-gray-600">Entregador</p>
             </div>
             <div className={`w-3 h-3 rounded-full ${entregador?.status === 'disponivel' ? 'bg-green-500' : 'bg-red-500'}`} title={entregador?.status} />
-            <Link href="/selecionar-role" className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm" title="Trocar perfil">🔄</Link>
+            <TrocarPerfilButton />
             <LogoutButton />
           </div>
         </div>

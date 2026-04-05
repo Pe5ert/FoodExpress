@@ -10,6 +10,7 @@ export default authMiddleware({
     "/sobre",
     "/contato",
     "/api/webhooks(.*)",
+    "/api/restaurantes",
   ],
   ignoredRoutes: ["/api/webhooks/stripe"],
 });

@@ -52,22 +52,23 @@ export async function POST(request: Request) {
       )
     }
 
-    const resultado = await db.execute({
+    const id = crypto.randomUUID();
+    await db.execute({
       sql: `INSERT INTO tickets
-            (cliente_id, titulo, descricao, categoria, pedido_id, status, prioridade)
-            VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      args: [userId, titulo, descricao, categoria, pedidoId || null, 'aberto', 'normal']
-    })
+            (id, cliente_id, titulo, descricao, categoria, pedido_id, status, prioridade, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [id, userId, titulo, descricao, categoria, pedidoId || null, 'aberto', 'normal', new Date().toISOString()]
+    });
 
     return NextResponse.json(
       {
         mensagem: 'Ticket criado com sucesso',
-        id: resultado.lastInsertRowid
+        id: id
       },
       { status: 201 }
     )
   } catch (erro) {
-    console.error('Erro:', erro)
+    console.error('Erro ao criar ticket:', erro)
     return NextResponse.json(
       { erro: 'Erro ao criar ticket' },
       { status: 500 }

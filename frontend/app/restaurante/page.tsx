@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import LogoutButton from '../../components/LogoutButton'
+import { TrocarPerfilButton } from '../../components/TrocarPerfilButton'
 
 interface Restaurante {
   id: string
@@ -156,7 +157,7 @@ export default function RestaurantePage() {
                 {restaurante?.status === 'ativo' && <span className="ml-2 text-green-600 text-xs">✅ Ativo</span>}
               </p>
             </div>
-            <Link href="/selecionar-role" className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm" title="Trocar perfil">🔄</Link>
+            <TrocarPerfilButton />
             <LogoutButton />
           </div>
         </div>

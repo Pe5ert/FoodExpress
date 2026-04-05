@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useUser } from '@clerk/nextjs'
 import Link from 'next/link'
 import LogoutButton from '../../components/LogoutButton'
+import { TrocarPerfilButton } from '../../components/TrocarPerfilButton'
 
 interface Pedido {
   id: string
@@ -21,14 +22,33 @@ interface Restaurante {
   tempo_medio_preparo: number
 }
 
+interface Ticket {
+  id: string
+  titulo: string
+  descricao: string
+  categoria: string
+  status: string
+  created_at: string
+}
+
 export default function ClientePage() {
   const { user } = useUser()
-  const [abaSelecionada, setAbaSelecionada] = useState<'pedidos' | 'restaurantes'>('restaurantes')
+  const [abaSelecionada, setAbaSelecionada] = useState<'pedidos' | 'restaurantes' | 'suporte'>('restaurantes')
   const [pedidos, setPedidos] = useState<Pedido[]>([])
   const [restaurantes, setRestaurantes] = useState<Restaurante[]>([])
+  const [tickets, setTickets] = useState<Ticket[]>([])
   const [clienteId, setClienteId] = useState<string>('')
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
+  
+  // Estados para novo ticket
+  const [novoTicket, setNovoTicket] = useState({
+    titulo: '',
+    descricao: '',
+    categoria: 'outro'
+  })
+  const [criandoTicket, setCriandoTicket] = useState(false)
+  const [abaSuporteSelecionada, setAbaSuporteSelecionada] = useState<'listar' | 'novo'>('listar')
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -52,6 +72,13 @@ export default function ClientePage() {
         if (resRestaurantes.ok) {
           const dadosRestaurantes = await resRestaurantes.json()
           setRestaurantes(dadosRestaurantes)
+        }
+
+        // Busca tickets do cliente
+        const resTickets = await fetch('/api/tickets')
+        if (resTickets.ok) {
+          const dadosTickets = await resTickets.json()
+          setTickets(dadosTickets)
         }
       } catch (err) {
         console.error('Erro ao carregar dados:', err)
@@ -88,6 +115,53 @@ export default function ClientePage() {
     return labels[status] || status
   }
 
+  const enviarTicket = async () => {
+    if (!novoTicket.titulo || !novoTicket.descricao) {
+      alert('Por favor, preencha todos os campos')
+      return
+    }
+
+    setCriandoTicket(true)
+    try {
+      const res = await fetch('/api/tickets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(novoTicket)
+      })
+
+      if (res.ok) {
+        alert('✅ Ticket criado com sucesso! Entraremos em contato em breve.')
+        // Recarrega a lista de tickets
+        const resTickets = await fetch('/api/tickets')
+        if (resTickets.ok) {
+          const dadosTickets = await resTickets.json()
+          setTickets(dadosTickets)
+        }
+        // Limpa o formulário
+        setNovoTicket({ titulo: '', descricao: '', categoria: 'outro' })
+        setAbaSuporteSelecionada('listar')
+      } else {
+        const erro = await res.json()
+        alert('❌ Erro: ' + (erro.erro || 'Falha ao criar ticket'))
+      }
+    } catch (err) {
+      console.error('Erro ao enviar ticket:', err)
+      alert('❌ Erro ao enviar ticket. Tente novamente.')
+    } finally {
+      setCriandoTicket(false)
+    }
+  }
+
+  const obterCorStatusTicket = (status: string) => {
+    switch (status) {
+      case 'aberto': return 'bg-yellow-100 text-yellow-800'
+      case 'em_analise': return 'bg-blue-100 text-blue-800'
+      case 'resolvido': return 'bg-green-100 text-green-800'
+      case 'fechado': return 'bg-gray-100 text-gray-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
+  }
+
   if (carregando) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -111,7 +185,7 @@ export default function ClientePage() {
             </div>
             <div className="flex gap-2">
               <Link href="/perfil" className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm" title="Perfil">👤</Link>
-              <Link href="/suporte" className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded text-sm" title="Suporte">💬</Link>
+              <TrocarPerfilButton />
               <LogoutButton />
             </div>
           </div>
@@ -140,6 +214,16 @@ export default function ClientePage() {
             }`}
           >
             📦 Meus Pedidos {pedidos.length > 0 && <span className="ml-1 bg-orange-600 text-white text-xs px-2 py-0.5 rounded-full">{pedidos.length}</span>}
+          </button>
+          <button
+            onClick={() => setAbaSelecionada('suporte')}
+            className={`py-4 px-4 border-b-2 font-medium ${
+              abaSelecionada === 'suporte'
+                ? 'border-orange-600 text-orange-600'
+                : 'border-transparent text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            💬 Suporte {tickets.length > 0 && <span className="ml-1 bg-orange-600 text-white text-xs px-2 py-0.5 rounded-full">{tickets.length}</span>}
           </button>
         </div>
       </div>
@@ -190,7 +274,7 @@ export default function ClientePage() {
               </div>
             )}
           </div>
-        ) : (
+        ) : abaSelecionada === 'pedidos' ? (
           <div>
             <h2 className="text-2xl font-bold mb-6">Meus Pedidos</h2>
             {pedidos.length === 0 ? (
@@ -240,6 +324,129 @@ export default function ClientePage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div>
+            {/* Sub-abas de Suporte */}
+            <div className="mb-6 border-b bg-white">
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setAbaSuporteSelecionada('listar')}
+                  className={`py-3 px-4 font-medium border-b-2 ${
+                    abaSuporteSelecionada === 'listar'
+                      ? 'border-orange-600 text-orange-600'
+                      : 'border-transparent text-gray-600'
+                  }`}
+                >
+                  Meus Tickets ({tickets.length})
+                </button>
+                <button
+                  onClick={() => setAbaSuporteSelecionada('novo')}
+                  className={`py-3 px-4 font-medium border-b-2 ${
+                    abaSuporteSelecionada === 'novo'
+                      ? 'border-orange-600 text-orange-600'
+                      : 'border-transparent text-gray-600'
+                  }`}
+                >
+                  Novo Ticket
+                </button>
+              </div>
+            </div>
+
+            {abaSuporteSelecionada === 'listar' ? (
+              <div>
+                <h2 className="text-2xl font-bold mb-6">Meus Tickets</h2>
+                {tickets.length === 0 ? (
+                  <div className="bg-white p-12 rounded-lg border text-center">
+                    <div className="text-4xl mb-4">📋</div>
+                    <p className="text-gray-600 mb-4">Você não possui tickets abertos</p>
+                    <button
+                      onClick={() => setAbaSuporteSelecionada('novo')}
+                      className="bg-orange-600 text-white px-6 py-2 rounded hover:bg-orange-700"
+                    >
+                      Criar um Ticket
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {tickets.map((ticket) => (
+                      <div key={ticket.id} className="bg-white p-6 rounded-lg border hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-600">Ticket #{ticket.id.slice(-8)}</p>
+                            <h3 className="text-xl font-semibold text-gray-800">{ticket.titulo}</h3>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium capitalize ${obterCorStatusTicket(ticket.status)}`}>
+                            {ticket.status}
+                          </span>
+                        </div>
+                        <p className="text-gray-700 mb-3">{ticket.descricao}</p>
+                        <div className="flex justify-between items-center text-sm text-gray-600">
+                          <span>Categoria: {ticket.categoria}</span>
+                          <span>Aberto em: {new Date(ticket.created_at).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="max-w-2xl">
+                <h2 className="text-2xl font-bold mb-6">Criar Novo Ticket</h2>
+                <div className="bg-white rounded-lg border p-8">
+                  <div className="mb-6">
+                    <label className="block text-lg font-semibold mb-2">Categoria do Problema</label>
+                    <select
+                      value={novoTicket.categoria}
+                      onChange={(e) => setNovoTicket({ ...novoTicket, categoria: e.target.value })}
+                      className="w-full border rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    >
+                      <option value="pedido">Problema com Pedido</option>
+                      <option value="entrega">Problema com Entrega</option>
+                      <option value="pagamento">Problema de Pagamento</option>
+                      <option value="conta">Problema com Conta</option>
+                      <option value="outro">Outro</option>
+                    </select>
+                  </div>
+
+                  <div className="mb-6">
+                    <label className="block text-lg font-semibold mb-2">Assunto</label>
+                    <input
+                      type="text"
+                      value={novoTicket.titulo}
+                      onChange={(e) => setNovoTicket({ ...novoTicket, titulo: e.target.value })}
+                      placeholder="Resumo do problema"
+                      className="w-full border rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+
+                  <div className="mb-6">
+                    <label className="block text-lg font-semibold mb-2">Descrição Detalhada</label>
+                    <textarea
+                      value={novoTicket.descricao}
+                      onChange={(e) => setNovoTicket({ ...novoTicket, descricao: e.target.value })}
+                      placeholder="Descreva o problema em detalhes..."
+                      className="w-full border rounded px-4 py-3 h-40 resize-none focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+
+                  <button
+                    onClick={enviarTicket}
+                    disabled={criandoTicket}
+                    className="w-full bg-orange-600 hover:bg-orange-700 disabled:bg-gray-400 text-white font-bold py-3 rounded transition-colors"
+                  >
+                    {criandoTicket ? '⏳ Enviando...' : '✅ Enviar Ticket'}
+                  </button>
+                </div>
+
+                <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <h4 className="font-bold text-blue-900 mb-2">📞 Tempo de Resposta</h4>
+                  <p className="text-blue-800">
+                    Respondemos tickets em até 24 horas. Você receberá um email com atualizações sobre seu ticket.
+                  </p>
+                </div>
               </div>
             )}
           </div>

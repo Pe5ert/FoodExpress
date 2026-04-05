@@ -19,9 +19,12 @@ export default function SelecionarRole() {
       return
     }
 
-    // Se o usuário já tem um role definido, redirecionar para sua página
+    // Se o usuário já tem um role definido E NÃO veio de um "trocar perfil", redireciona
     const roleDefinido = user.unsafeMetadata?.role as string | undefined
-    if (roleDefinido) {
+    const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
+    const estaVolTandoDePerfil = searchParams.get('trocar') === 'true'
+    
+    if (roleDefinido && !estaVolTandoDePerfil) {
       const rotasRole: Record<string, string> = {
         cliente: '/cliente',
         entregador: '/entregador',
@@ -81,7 +84,12 @@ export default function SelecionarRole() {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-orange-600 mb-2">🍕 FoodExpress</h1>
           <p className="text-xl text-gray-700">Bem-vindo, {user?.firstName}!</p>
-          <p className="text-gray-600 mt-2">Escolha seu perfil para continuar</p>
+          <p className="text-gray-600 mt-2">
+            {user?.unsafeMetadata?.role 
+              ? `Seu perfil atual: ${((user.unsafeMetadata.role as string).charAt(0).toUpperCase() + (user.unsafeMetadata.role as string).slice(1))} - Escolha outro para trocar`
+              : 'Escolha seu perfil para continuar'
+            }
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
