@@ -1,0 +1,52 @@
+/* App.css — estilos globais + design tokens FoodExpress */
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600&family=Roboto+Mono:wght@500&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ── Variáveis CSS do design system ─────────────────────────── */
+:root {
+  --color-primary:        #FF6B35;
+  --color-secondary:      #2E294E;
+  --color-accent:         #1B998B;
+  --color-background:     #FFF8F5;
+  --color-text:           #2D3436;
+
+  /* Derivadas */
+  --color-primary-light:  #FFF0EB;
+  --color-surface-2:      #F5EDE8;
+  --color-border:         #EDE0D9;
+  --color-text-muted:     #8A7B74;
+  --color-text-secondary: #5A4F4A;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Famílias de fonte ───────────────────────────────────────── */
+.font-display { font-family: 'Poppins', sans-serif !important; }
+.font-mono    { font-family: 'Roboto Mono', monospace !important; }
+
+/* ── Scrollbar ───────────────────────────────────────────────── */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+.scrollbar-thin::-webkit-scrollbar       { width: 4px; height: 4px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: #EDE0D9; border-radius: 4px; }

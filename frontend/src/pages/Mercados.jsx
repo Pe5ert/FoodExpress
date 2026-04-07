@@ -1,0 +1,22 @@
+import Header from '../components/Header'
+import StoreGrid from '../components/GradeLojas'
+import MobileNavBar from '../components/MobileNavBar'
+import Rodape from '../components/Rodape'
+import { motion as Motion } from 'framer-motion'
+
+export default function Mercados() {
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <Header />
+      <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 pb-24 md:pb-8 flex-1">
+        <Motion.h1 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}
+          className="font-display text-2xl sm:text-3xl font-extrabold text-text-primary mb-6">
+          🛒 Mercados
+        </Motion.h1>
+        <StoreGrid tipo="mercado" />
+      </main>
+      <Rodape />
+      <MobileNavBar />
+    </div>
+  )
+}
