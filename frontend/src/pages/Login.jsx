@@ -403,6 +403,10 @@ export default function Login() {
                     className="text-xs text-text-muted hover:text-emerald-600 transition-colors bg-transparent border-none cursor-pointer font-semibold">
                     Sou entregador →
                   </button>
+                  <button onClick={() => navigate('/register/entregador')}
+                    className="text-xs text-emerald-600 hover:text-emerald-700 font-bold transition-colors bg-transparent border-none cursor-pointer underline">
+                    Cadastrar como entregador →
+                  </button>
                 </>
               )}
               {config.voltarLabel && (

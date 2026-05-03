@@ -6,6 +6,7 @@ import Restaurantes from './pages/Restaurantes'
 import Mercados from './pages/Mercados'
 import CadastroUsuario from './pages/CadastroUsuario'
 import CadastroEstabelecimento from './pages/CadastroEstabelecimento'
+import CadastroEntregador from './pages/CadastroEntregador'
 import PaginaLoja from './pages/PaginaLoja'
 import PaginaBusca from './pages/PaginaBusca'
 import PerfilCliente from './pages/PerfilCliente'
@@ -54,6 +55,7 @@ function AnimatedRoutes() {
         <Route path="/login" element={<PageWrapper><Login /></PageWrapper>} />
         <Route path="/register/user" element={<PageWrapper><CadastroUsuario /></PageWrapper>} />
         <Route path="/register/store" element={<PageWrapper><CadastroEstabelecimento /></PageWrapper>} />
+        <Route path="/register/entregador" element={<PageWrapper><CadastroEntregador /></PageWrapper>} />
         <Route path="/Restaurantes" element={<PageWrapper><Restaurantes /></PageWrapper>} />
         <Route path="/Mercados" element={<PageWrapper><Mercados /></PageWrapper>} />
         <Route path="/loja/:id" element={<PageWrapper><PaginaLoja /></PageWrapper>} />

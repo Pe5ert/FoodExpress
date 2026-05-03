@@ -89,7 +89,10 @@ export const api = {
   clientes: {
     meuPerfil: () => request('/api/clientes'),
     atualizar: (id, dados) => request(`/api/clientes/${id}`, { method: 'PUT', body: JSON.stringify(dados) }),
-    cadastrarInicial: () => request('/api/clientes', { method: 'POST' }),
+    cadastrarInicial: () => {
+      const usuario = (() => { try { return JSON.parse(localStorage.getItem('usuario') || '{}') } catch { return {} } })()
+      return request('/api/clientes', { method: 'POST', body: JSON.stringify({ nome: usuario.nome, email: usuario.email }) })
+    },
   },
 
   // ── Entregadores ──────────────────────────────────────────────────────────

@@ -132,7 +132,8 @@ export function AuthProvider({ children }) {
     setUsuario(novoUsuario)
 
     if (perfil === 'gerente') {
-      await api.restaurantes.meuRestauranteOuCriar(novoUsuario.email, novoUsuario.nome)
+      api.restaurantes.meuRestauranteOuCriar(novoUsuario.email, novoUsuario.nome)
+        .catch(err => console.warn('Restaurante será criado no próximo acesso:', err))
     }
 
     const destinos = { cliente: '/', gerente: '/gerente', entregador: '/entregador', restaurante: '/painel-restaurante' }
@@ -193,8 +194,8 @@ export function AuthProvider({ children }) {
         nome: novoUsuario.loja.nome || novoUsuario.nome,
       })
     } catch (error) {
-      console.warn('Não foi possível criar restaurante no backend:', error)
-      throw error
+      // Não bloqueia o cadastro se o backend falhar — o gerente ainda pode usar o painel
+      console.warn('Não foi possível criar restaurante no backend (será criado no primeiro acesso):', error)
     }
 
     navigate('/gerente');

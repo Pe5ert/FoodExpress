@@ -2,14 +2,10 @@ import { useState } from 'react'
 import { mascaraTelefone } from '../utils/mascaras'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate, Link } from 'react-router-dom'
-import { Mail, Phone, ArrowLeft, Check, Send } from 'lucide-react'
+import { Mail, Phone, ArrowLeft, Check, Send, User } from 'lucide-react'
 import { motion as Motion } from 'framer-motion'
 import logoSrc from '../imgs/Logo-site.png'
 
-const camposCadastroUsuario = [
-  { label: 'E-mail', name: 'email', type: 'email', placeholder: 'seu@email.com', Icon: Mail },
-  { label: 'Telefone / WhatsApp', name: 'telefone', type: 'tel', placeholder: '(11) 99999-9999', Icon: Phone },
-]
 const beneficiosCadastroUsuario = [
   'Peça em centenas de restaurantes',
   'Acompanhe seu pedido em tempo real',
@@ -17,18 +13,14 @@ const beneficiosCadastroUsuario = [
   'Ofertas exclusivas para membros',
 ]
 
-
-// aqui e o back gelado - campos e benefícios fixos devem vir de backend ou CMS
 const itemVariants = {
   hidden: { opacity: 0, y: 16 },
   show: { opacity: 1, y: 0, transition: { duration: 0.35 } },
 }
 
-const campos = camposCadastroUsuario
-const beneficios = beneficiosCadastroUsuario
-
 export default function CadastroUsuario() {
-  const [dados, setDados] = useState({ email: '', telefone: '' })
+  const [modo, setModo] = useState('email') // 'email' | 'telefone'
+  const [dados, setDados] = useState({ nome: '', email: '', telefone: '' })
   const [enviado, setEnviado] = useState(false)
   const [carregando, setCarregando] = useState(false)
   const [aceitouTermos, setAceitouTermos] = useState(false)
@@ -38,15 +30,23 @@ export default function CadastroUsuario() {
   const handleEnviar = async (e) => {
     e.preventDefault()
     if (!aceitouTermos) return
+    if (!dados.nome.trim()) return
+    if (modo === 'email' && !dados.email.trim()) return
+    if (modo === 'telefone' && !dados.telefone.trim()) return
+
     setCarregando(true)
     try {
-      // Cria o cliente no backend (sem senha — autenticação via link por email)
-      await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/auth/registrar`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: dados.email, telefone: dados.telefone }),
-      })
-      setEnviado(true)
+      if (modo === 'email') {
+        await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/auth/registrar`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nome: dados.nome, email: dados.email, telefone: dados.telefone }),
+        })
+        setEnviado(true)
+      } else {
+        // Cadastro por nome + telefone — entra direto
+        await cadastrarCliente({ nome: dados.nome, telefone: dados.telefone, email: `${dados.telefone.replace(/\D/g, '')}@telefone.local` })
+      }
     } catch (err) {
       console.error(err)
     } finally {
@@ -63,7 +63,6 @@ export default function CadastroUsuario() {
 
   const inputClass = "w-full pl-10 pr-4 py-3.5 border border-border rounded-xl text-sm font-semibold text-text-primary bg-surface-2 outline-none transition-all focus:border-primary focus:bg-white focus:shadow-[0_0_0_3px_rgba(255,107,53,0.08)] placeholder:text-text-muted placeholder:font-normal"
 
-
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
 
@@ -76,7 +75,7 @@ export default function CadastroUsuario() {
           style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%)' }} />
 
         <button onClick={() => navigate('/')} className="absolute top-6 left-11 text-white/80 hover:text-white transition-colors flex items-center gap-1">
-          <img src={logoSrc} alt="FoodExpress" className="h-18 w-auto mb-12" />
+          <img src={logoSrc} alt="FoodExpress" className="h-16 w-auto mb-12" />
         </button>
 
         <Motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}>
@@ -88,7 +87,7 @@ export default function CadastroUsuario() {
           </p>
 
           <div className="flex flex-col gap-3">
-            {beneficios.map((b, i) => (
+            {beneficiosCadastroUsuario.map((b, i) => (
               <Motion.div key={b}
                 initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2 + i * 0.1, duration: 0.35 }}
@@ -120,7 +119,23 @@ export default function CadastroUsuario() {
           </button>
 
           <h2 className="font-display text-2xl font-extrabold text-text-primary mb-1 tracking-tight">Criar conta grátis</h2>
-          <p className="text-sm text-text-muted font-semibold mb-7">Rápido e fácil, leva menos de 1 minuto</p>
+          <p className="text-sm text-text-muted font-semibold mb-5">Rápido e fácil, leva menos de 1 minuto</p>
+
+          {/* Seletor de modo */}
+          <div className="flex gap-2 p-1 bg-surface-2 rounded-xl mb-6 border border-border">
+            <button
+              onClick={() => setModo('email')}
+              className={`flex-1 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer border-none ${modo === 'email' ? 'bg-white text-primary shadow-sm' : 'bg-transparent text-text-muted hover:text-text-primary'}`}
+            >
+              📧 Por e-mail
+            </button>
+            <button
+              onClick={() => setModo('telefone')}
+              className={`flex-1 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer border-none ${modo === 'telefone' ? 'bg-white text-primary shadow-sm' : 'bg-transparent text-text-muted hover:text-text-primary'}`}
+            >
+              📱 Por telefone
+            </button>
+          </div>
 
           {enviado ? (
             <Motion.div
@@ -141,20 +156,46 @@ export default function CadastroUsuario() {
             </Motion.div>
           ) : (
             <form onSubmit={handleEnviar} className="flex flex-col gap-4">
-              {campos.map((field, i) => {
-                const Icon = field.Icon
-                return (
-                <Motion.div key={field.name} className="flex flex-col gap-1.5"
-                  variants={itemVariants} initial="hidden" animate="show"
-                  transition={{ delay: i * 0.08 }}>
-                  <label className="text-xs font-extrabold text-text-secondary uppercase tracking-wide">{field.label}</label>
+              {/* Nome */}
+              <Motion.div className="flex flex-col gap-1.5" variants={itemVariants} initial="hidden" animate="show">
+                <label className="text-xs font-extrabold text-text-secondary uppercase tracking-wide">Seu nome *</label>
+                <div className="relative">
+                  <User size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                  <input name="nome" type="text" placeholder="Como podemos te chamar?"
+                    value={dados.nome} onChange={handleChange} required className={inputClass} />
+                </div>
+              </Motion.div>
+
+              {modo === 'email' ? (
+                <>
+                  <Motion.div className="flex flex-col gap-1.5" variants={itemVariants} initial="hidden" animate="show" transition={{ delay: 0.08 }}>
+                    <label className="text-xs font-extrabold text-text-secondary uppercase tracking-wide">E-mail *</label>
+                    <div className="relative">
+                      <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                      <input name="email" type="email" placeholder="seu@email.com"
+                        value={dados.email} onChange={handleChange} required className={inputClass} />
+                    </div>
+                  </Motion.div>
+                  <Motion.div className="flex flex-col gap-1.5" variants={itemVariants} initial="hidden" animate="show" transition={{ delay: 0.16 }}>
+                    <label className="text-xs font-extrabold text-text-secondary uppercase tracking-wide">Telefone (opcional)</label>
+                    <div className="relative">
+                      <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                      <input name="telefone" type="tel" placeholder="(11) 99999-9999"
+                        value={dados.telefone} onChange={handleChange} className={inputClass} />
+                    </div>
+                  </Motion.div>
+                </>
+              ) : (
+                <Motion.div className="flex flex-col gap-1.5" variants={itemVariants} initial="hidden" animate="show" transition={{ delay: 0.08 }}>
+                  <label className="text-xs font-extrabold text-text-secondary uppercase tracking-wide">WhatsApp / Telefone *</label>
                   <div className="relative">
-                    <Icon size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
-                    <input name={field.name} type={field.type} placeholder={field.placeholder}
-                      value={dados[field.name]} onChange={handleChange} required className={inputClass} />
+                    <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                    <input name="telefone" type="tel" placeholder="(11) 99999-9999"
+                      value={dados.telefone} onChange={handleChange} required className={inputClass} />
                   </div>
+                  <p className="text-xs text-text-muted font-medium mt-0.5">Seu número será seu identificador de acesso</p>
                 </Motion.div>
-                )})}
+              )}
 
               <label className="flex items-start gap-2.5 cursor-pointer">
                 <input type="checkbox" checked={aceitouTermos} onChange={e => setAceitouTermos(e.target.checked)}
@@ -168,7 +209,9 @@ export default function CadastroUsuario() {
                 className="w-full py-4 bg-primary text-white border-none rounded-xl font-display font-bold text-base cursor-pointer disabled:bg-border disabled:text-text-muted disabled:cursor-not-allowed"
                 whileHover={{ scale: 1.02, boxShadow: '0 4px 20px rgba(255,107,53,0.35)' }}
                 whileTap={{ scale: 0.98 }}>
-                {carregando ? 'Enviando link...' : 'Criar conta — receber link por e-mail'}
+                {carregando
+                  ? (modo === 'email' ? 'Enviando link...' : 'Criando conta...')
+                  : (modo === 'email' ? 'Criar conta — receber link por e-mail' : 'Criar conta com telefone')}
               </Motion.button>
             </form>
           )}

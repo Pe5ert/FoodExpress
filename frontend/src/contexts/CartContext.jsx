@@ -20,10 +20,11 @@ export function CartProvider({ children }) {
       const existente = anterior.find((i) => i.id === item.id);
       if (existente) {
         return anterior.map((i) =>
-          i.id === item.id ? { ...i, quantidade: i.quantidade + 1 } : i
+          i.id === item.id ? { ...i, quantidade: i.quantidade + (item.quantidade || 1) } : i
         );
       }
-      return [...anterior, { ...item, quantidade: 1 }];
+      // Garante que restauranteId seja preservado para o checkout
+      return [...anterior, { ...item, quantidade: item.quantidade || 1 }];
     });
   };
 

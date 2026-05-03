@@ -162,7 +162,14 @@ export default function PerfilCliente() {
       try {
         const [listaPedidos, cliente] = await Promise.all([
           api.pedidos.listar({ clienteId: usuario?.id }).catch(() => []),
-          api.clientes.meuPerfil().catch(() => null),
+          api.clientes.meuPerfil().catch(async () => {
+            // Cliente não existe no backend ainda — cria automaticamente
+            try {
+              return await api.clientes.cadastrarInicial()
+            } catch {
+              return null
+            }
+          }),
         ])
 
         if (!ativo) return
@@ -188,6 +195,8 @@ export default function PerfilCliente() {
         } else {
           setEnderecos([])
         }
+      } catch (err) {
+        console.warn('Erro ao carregar perfil:', err)
       } finally {
         if (ativo) setCarregando(false)
       }

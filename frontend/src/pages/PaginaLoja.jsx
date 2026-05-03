@@ -50,6 +50,7 @@ function ProdutoModal({ produto, loja, onClose }) {
       emoji: produto.emoji,
       quantidade,
       comentario,
+      restauranteId: produto.restauranteId,
     })
     onClose()
   }
@@ -364,8 +365,10 @@ export default function StorePage() {
   const [loja, setLoja] = useState(null)
   const [cardapio, setCardapio] = useState([])
   const [carregando, setCarregando] = useState(true)
+  const [erroCarregamento, setErroCarregamento] = useState('')
 
   useEffect(() => {
+    setErroCarregamento('')
     Promise.all([
       api.restaurantes.buscarPorId(id),
       api.cardapio.listar(id),
@@ -378,10 +381,11 @@ export default function StorePage() {
           id: item.id,
           nome: item.nome,
           desc: item.descricao,
-          preco: item.preco,
+          preco: Number(item.preco) || 0,
           emoji: item.emoji || '🍽️',
           serve: 1,
           opcionais: [],
+          restauranteId: id,
         })
       })
       setLoja({
@@ -401,7 +405,10 @@ export default function StorePage() {
         pagamentos: ['Dinheiro', 'Crédito', 'Débito', 'Pix'],
       })
       setCardapio(itens)
-    }).catch(console.error)
+    }).catch(err => {
+      console.error(err)
+      setErroCarregamento(err.message || 'Erro ao carregar')
+    })
       .finally(() => setCarregando(false))
   }, [id])
 
@@ -423,7 +430,7 @@ export default function StorePage() {
   }, [loja])
 
   if (carregando) return <div className="min-h-screen flex items-center justify-center"><span className="text-text-muted">Carregando...</span></div>
-  if (!loja) return <div className="min-h-screen flex items-center justify-center"><span className="text-text-muted">Restaurante não encontrado</span></div>
+  if (!loja) return <div className="min-h-screen flex items-center justify-center text-center px-4"><p className="text-4xl mb-3">🔌</p><p className="font-bold text-text-primary mb-1">{erroCarregamento || 'Restaurante não encontrado'}</p></div>
 
   const categoriasFiltradas = loja.categorias
     .map(cat => ({

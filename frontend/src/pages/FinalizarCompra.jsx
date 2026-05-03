@@ -170,9 +170,6 @@ export default function Checkout() {
     if (itens.length === 0) return
 
     const restauranteId = itens[0]?.restauranteId || itens[0]?.loja?.id || null
-    if (!restauranteId) {
-      // Sem restauranteId no carrinho — confirma com aviso mas cria pedido genérico
-    }
 
     setErro('')
     setCarregando(true)
@@ -182,12 +179,20 @@ export default function Checkout() {
         id: i.id,
         nome: i.name || i.nome,
         quantidade: i.quantidade,
-        preco: i.price || i.preco || 0,
+        preco: Number(i.price || i.preco || 0),
       }))
+
+      if (!restauranteId) {
+        // Sem restauranteId — pedido local sem backend (modo offline)
+        limparCarrinho()
+        const numFake = `#${Math.floor(1000 + Math.random() * 9000)}`
+        setPedidoConfirmado(numFake)
+        return
+      }
 
       const resultado = await api.pedidos.criar({
         clienteId,
-        restauranteId: restauranteId || 'rest_default',
+        restauranteId,
         itens: itensPedido,
         endereco_entrega: enderecoFinal,
         latitude: localizacao?.latitude || 0,

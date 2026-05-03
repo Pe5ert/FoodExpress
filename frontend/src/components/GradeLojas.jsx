@@ -5,8 +5,10 @@ import api from '../services/api'
 export default function StoreGrid({ tipo }) {
   const [lista, setLista] = useState([])
   const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState('')
 
   useEffect(() => {
+    setErro('')
     api.restaurantes.listar(tipo && tipo !== 'mercado' ? { categoria: tipo } : {})
       .then(dados => {
         const normalizados = dados.map(r => ({
@@ -19,10 +21,11 @@ export default function StoreGrid({ tipo }) {
         setLista(normalizados)
       })
       .catch(err => {
-        if (err.message?.includes('Backend offline')) {
-          console.warn('⚠️ Backend offline — rode: cd backend && npm run dev')
+        if (err.message?.includes('Backend offline') || err.message?.includes('fetch')) {
+          setErro('backend_offline')
         } else {
           console.error(err)
+          setErro('erro_generico')
         }
       })
       .finally(() => setCarregando(false))
@@ -34,6 +37,16 @@ export default function StoreGrid({ tipo }) {
         {[...Array(8)].map((_, i) => (
           <div key={i} className="h-48 rounded-2xl bg-surface-2 animate-pulse" />
         ))}
+      </div>
+    )
+  }
+
+  if (erro === 'backend_offline') {
+    return (
+      <div className="text-center py-16 text-text-muted bg-surface-2 rounded-2xl border border-border">
+        <p className="text-4xl mb-3">🔌</p>
+        <p className="font-bold text-text-primary mb-1">Backend offline</p>
+        <p className="text-sm font-semibold">Inicie o servidor: <code className="bg-white px-2 py-0.5 rounded text-xs font-mono border border-border">cd backend && npm run dev</code></p>
       </div>
     )
   }

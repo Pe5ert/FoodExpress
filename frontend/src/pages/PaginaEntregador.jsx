@@ -14,61 +14,56 @@ import api from '../services/api'
 // dados carregados do backend no componente principal
 
 // ── Mini mapa SVG ─────────────────────────────────────────────────────────────
-function MiniMapa({ etapa }) {
+function MiniMapa({ etapa, localizacao, entrega }) {
+  const entregadorX = etapa === 'coletando' ? 60 : 200
+
+  const abrirMaps = () => {
+    const destino = entrega?.destino?.rua || ''
+    if (localizacao && destino) {
+      const url = `https://www.google.com/maps/dir/?api=1&origin=${localizacao.latitude},${localizacao.longitude}&destination=${encodeURIComponent(destino)}&travelmode=driving`
+      window.open(url, '_blank')
+    } else if (localizacao) {
+      const url = `https://www.google.com/maps/@${localizacao.latitude},${localizacao.longitude},16z`
+      window.open(url, '_blank')
+    }
+  }
+
   return (
-    <div className="relative w-full h-40 rounded-2xl overflow-hidden bg-[#e8f0e8]">
+    <div className="relative w-full h-44 rounded-2xl overflow-hidden bg-[#e8f0e8] cursor-pointer group" onClick={abrirMaps}>
       <svg viewBox="0 0 400 160" className="w-full h-full" preserveAspectRatio="xMidYMid slice">
-        {/* Fundo mapa */}
         <rect width="400" height="160" fill="#e8f0e8" />
-        {/* Quadras */}
         {[
           [10,10,80,60],[110,10,80,60],[210,10,80,60],[310,10,80,60],
           [10,90,80,60],[110,90,80,60],[210,90,80,60],[310,90,80,60],
-          [60,40,30,20],[160,40,30,20],[260,40,30,20],[360,40,30,20],
-          [60,100,30,20],[160,100,30,20],[260,100,30,20],[360,100,30,20],
         ].map(([x, y, w, h], i) => (
           <rect key={i} x={x} y={y} width={w} height={h} fill="#d4e4d4" rx="4" />
         ))}
-        {/* Ruas */}
         <rect x="0" y="70" width="400" height="18" fill="#f5f5f0" />
         <rect x="95" y="0" width="18" height="160" fill="#f5f5f0" />
         <rect x="195" y="0" width="18" height="160" fill="#f5f5f0" />
         <rect x="295" y="0" width="18" height="160" fill="#f5f5f0" />
-        {/* Rota */}
-        <polyline
-          points="60,79 104,79 204,79 304,79 304,40"
-          fill="none"
-          stroke="#ff6b35"
-          strokeWidth="3"
-          strokeDasharray="6,4"
-          strokeLinecap="round"
-        />
-        {/* Loja (origem) */}
+        <polyline points="60,79 104,79 204,79 304,79 304,40" fill="none"
+          stroke="#ff6b35" strokeWidth="3" strokeDasharray="6,4" strokeLinecap="round" />
         <circle cx="60" cy="79" r="10" fill="#2e294e" />
         <text x="60" y="83" textAnchor="middle" fontSize="10" fill="white">🍕</text>
-        {/* Destino */}
         <circle cx="304" cy="40" r="10" fill="#ff6b35" />
         <text x="304" y="44" textAnchor="middle" fontSize="10" fill="white">🏠</text>
-        {/* Entregador */}
-        <Motion.circle
-          cx={etapa === 'coletando' ? 60 : 180}
-          cy="79"
-          r="8"
-          fill="#1b998b"
-          animate={{ cx: etapa === 'coletando' ? 60 : 200 }}
-          transition={{ duration: 1.2, ease: 'easeInOut' }}
-        />
-        <Motion.text
-          x={etapa === 'coletando' ? 60 : 180}
-          y="83"
-          textAnchor="middle"
-          fontSize="9"
-          fill="white"
-          animate={{ x: etapa === 'coletando' ? 60 : 200 }}
-          transition={{ duration: 1.2, ease: 'easeInOut' }}
-        >🛵</Motion.text>
+        <Motion.circle cx={entregadorX} cy="79" r="8" fill="#1b998b"
+          animate={{ cx: entregadorX }} transition={{ duration: 1.2, ease: 'easeInOut' }} />
+        <Motion.text x={entregadorX} y="83" textAnchor="middle" fontSize="9" fill="white"
+          animate={{ x: entregadorX }} transition={{ duration: 1.2, ease: 'easeInOut' }}>🛵</Motion.text>
       </svg>
-      {/* Legenda */}
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all flex items-center justify-center">
+        <div className="opacity-0 group-hover:opacity-100 transition-all bg-white text-text-primary text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
+          <MapPin size={12} /> Abrir no Google Maps
+        </div>
+      </div>
+      {localizacao && (
+        <div className="absolute top-2 right-2 bg-accent text-white text-[10px] font-extrabold px-2 py-1 rounded-full flex items-center gap-1">
+          <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+          GPS ativo
+        </div>
+      )}
       <div className="absolute bottom-2 left-3 flex items-center gap-3 bg-white/80 backdrop-blur-sm rounded-lg px-2 py-1">
         <div className="flex items-center gap-1 text-[10px] font-bold text-secondary">
           <div className="w-2 h-2 rounded-full bg-secondary" /> Loja
@@ -85,7 +80,7 @@ function MiniMapa({ etapa }) {
 }
 
 // ── Card entrega ativa ────────────────────────────────────────────────────────
-function EntregaAtiva({ entrega, onAvançar }) {
+function EntregaAtiva({ entrega, onAvançar, localizacao }) {
   const naLoja = entrega.etapa === 'coletando'
 
   return (
@@ -108,7 +103,7 @@ function EntregaAtiva({ entrega, onAvançar }) {
       </div>
 
       <div className="p-5">
-        <MiniMapa etapa={entrega.etapa} />
+        <MiniMapa etapa={entrega.etapa} localizacao={localizacao} entrega={entrega} />
 
         {/* Info destino */}
         <div className="mt-4 flex flex-col gap-3">
@@ -194,7 +189,7 @@ function EntregaAtiva({ entrega, onAvançar }) {
 }
 
 // ── Fila de pedidos ────────────────────────────────────────────────────────────
-function FilaPedidos() {
+function FilaPedidos({ fila = [] }) {
   return (
     <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-border flex items-center justify-between">
@@ -230,7 +225,7 @@ function FilaPedidos() {
 }
 
 // ── Histórico ─────────────────────────────────────────────────────────────────
-function Historico() {
+function Historico({ historico = [] }) {
   return (
     <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-border flex items-center justify-between">
@@ -343,30 +338,45 @@ export default function PaginaEntregador() {
   const [entregadorId, setEntregadorId] = useState(null)
 
   useEffect(() => {
-    // Busca dados do entregador logado
-    api.entregadores.meuPerfil()
-      .then(ent => {
-        setEntregadorId(ent.id)
-        // Pedido ativo (entregando)
-        return api.pedidos.listar({ entregadorId: ent.id, status: 'entregando' })
-          .then(pedidosAtivos => {
-            if (pedidosAtivos.length > 0) {
-              const p = pedidosAtivos[0]
-              setEntregaAtiva({
-                id: `#${String(p.id).slice(-4)}`,
-                cliente: { nome: p.cliente_id, telefone: '', avatar: 'CL' },
-                loja: { nome: p.restaurante_id, emoji: '🍽️', endereco: '' },
-                destino: { rua: p.endereco_entrega, bairro: '', cidade: '' },
-                itens: typeof p.itens === 'string' ? p.itens : JSON.stringify(p.itens),
-                valor: p.total,
-                distancia: p.distancia_km ? `${p.distancia_km} km` : '--',
-                tempoEstimado: p.tempo_entrega_estimado ? `${p.tempo_entrega_estimado} min` : '--',
-                etapa: 'coletando',
-                _id: p.id,
-              })
-            }
+    // Busca ou cria dados do entregador logado
+    const carregarEntregador = async () => {
+      let ent = null
+      try {
+        ent = await api.entregadores.meuPerfil()
+      } catch {
+        // Entregador não existe no banco ainda — cria automaticamente
+        try {
+          ent = await api.entregadores.cadastrarInicial({})
+        } catch (e2) {
+          console.warn('Não foi possível criar entregador no backend:', e2)
+          return
+        }
+      }
+      if (!ent?.id) return
+      setEntregadorId(ent.id)
+      // Pedido ativo (entregando)
+      try {
+        const pedidosAtivos = await api.pedidos.listar({ entregadorId: ent.id, status: 'entregando' })
+        if (pedidosAtivos.length > 0) {
+          const p = pedidosAtivos[0]
+          setEntregaAtiva({
+            id: `#${String(p.id).slice(-4)}`,
+            cliente: { nome: p.cliente_id, telefone: '', avatar: 'CL' },
+            loja: { nome: p.restaurante_id, emoji: '🍽️', endereco: '' },
+            destino: { rua: p.endereco_entrega, bairro: '', cidade: '' },
+            itens: typeof p.itens === 'string' ? p.itens : JSON.stringify(p.itens),
+            valor: p.total,
+            distancia: p.distancia_km ? `${p.distancia_km} km` : '--',
+            tempoEstimado: p.tempo_entrega_estimado ? `${p.tempo_entrega_estimado} min` : '--',
+            etapa: 'coletando',
+            _id: p.id,
           })
-      }).catch(console.error)
+        }
+      } catch (e) {
+        console.warn('Erro ao buscar pedidos ativos:', e)
+      }
+    }
+    carregarEntregador()
   }, [])
 
   useEffect(() => {
@@ -572,13 +582,13 @@ export default function PaginaEntregador() {
 
           {/* Coluna esquerda */}
           <div className="flex flex-col gap-5">
-            {entrega ? <EntregaAtiva entrega={entrega} onAvançar={handleAvançar} /> : <div className="bg-white rounded-2xl border border-border p-8 text-center text-text-muted"><p className="text-3xl mb-3">🛵</p><p className="font-semibold">Nenhuma entrega ativa</p><p className="text-sm mt-1">Aguardando novo pedido...</p></div>}
-            <Historico />
+            {entrega ? <EntregaAtiva entrega={entrega} onAvançar={handleAvançar} localizacao={localizacao} /> : <div className="bg-white rounded-2xl border border-border p-8 text-center text-text-muted"><p className="text-3xl mb-3">🛵</p><p className="font-semibold">Nenhuma entrega ativa</p><p className="text-sm mt-1">Aguardando novo pedido...</p></div>}
+            <Historico historico={historico} />
           </div>
 
           {/* Coluna direita */}
           <div className="flex flex-col gap-5">
-            <FilaPedidos />
+            <FilaPedidos fila={fila} />
 
             {/* Card ganhos da semana */}
             <Motion.div

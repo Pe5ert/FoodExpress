@@ -42,7 +42,11 @@ export default function ConfiguracoesGerente() {
         setEndereco(rest.endereco || '')
         setCategoria(rest.categoria || '')
       })
-      .catch(() => setErro('Não foi possível carregar os dados da loja.'))
+      .catch(err => {
+        // Backend offline ou token inválido — mostra formulário vazio sem bloquear
+        console.warn('Não foi possível carregar restaurante:', err)
+        setErro('Backend offline. Os dados serão sincronizados quando o servidor estiver disponível.')
+      })
       .finally(() => setCarregando(false))
   }, [usuario])
 

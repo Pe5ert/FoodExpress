@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion as Motion, AnimatePresence } from 'framer-motion'
 import { Plus, Pencil, Trash2, Search, ToggleLeft, ToggleRight, X, Check, FolderPlus } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
 import api from '../../services/api'
 
 // ── Modal produto ─────────────────────────────────────────────────────────────
@@ -179,6 +180,7 @@ function ModalNovaCategoria({ restauranteId, onFechar, onSalvo }) {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function CardapioGerente() {
+  const { usuario } = useAuth()
   const [categorias, setCategorias] = useState([])
   const [restauranteId, setRestauranteId] = useState(null)
   const [busca, setBusca] = useState('')
@@ -199,7 +201,7 @@ export default function CardapioGerente() {
   }, [])
 
   useEffect(() => {
-    const usr = JSON.parse(localStorage.getItem('usuario') || '{}')
+    const usr = usuario || JSON.parse(localStorage.getItem('usuario') || '{}')
     if (!usr?.email) { setCarregando(false); return }
 
     api.restaurantes.meuRestauranteOuCriar(usr.email, usr.nome || usr.email)
@@ -207,9 +209,11 @@ export default function CardapioGerente() {
         setRestauranteId(rest.id)
         return carregarCardapio(rest.id)
       })
-      .catch(console.error)
+      .catch(err => {
+        console.warn('Cardápio: erro ao carregar restaurante:', err)
+      })
       .finally(() => setCarregando(false))
-  }, [carregarCardapio])
+  }, [carregarCardapio, usuario])
 
   const toggleDisponivel = async (prodId, disponivel) => {
     try {
