@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import api from '../services/api';
@@ -49,7 +49,11 @@ export function AuthProvider({ children }) {
   });
   const [carregando] = useState(false);
   const [auth0Sincronizado, setAuth0Sincronizado] = useState(() => !auth0Configurado);
+  const ultimaContaAuth0Sincronizada = useRef(null);
   const navigate = useNavigate();
+  const auth0Sub = auth0User?.sub || '';
+  const auth0Email = auth0User?.email || '';
+  const auth0Name = auth0User?.name || '';
 
   useEffect(() => {
     if (!auth0Configurado) {
@@ -59,19 +63,27 @@ export function AuthProvider({ children }) {
 
     if (auth0Loading) return;
 
-    if (!isAuthenticated || !auth0User) {
+    if (!isAuthenticated || !auth0Sub) {
+      ultimaContaAuth0Sincronizada.current = null;
+      setAuth0Sincronizado(true);
+      return;
+    }
+
+    const chaveContaAuth0 = `${auth0Sub}|${auth0Email}|${auth0Name}`;
+    if (ultimaContaAuth0Sincronizada.current === chaveContaAuth0) {
       setAuth0Sincronizado(true);
       return;
     }
 
     const sincronizarAuth0 = async () => {
+      setAuth0Sincronizado(false);
       try {
         const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/auth/auth0-sync`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: auth0User.email || '',
-            nome: auth0User.name || '',
+            email: auth0Email,
+            nome: auth0Name,
           }),
         });
 
@@ -83,34 +95,47 @@ export function AuthProvider({ children }) {
         }
 
         const usuarioCliente = {
-          id: data?.usuario?.id || auth0User.sub || `auth0-${Date.now()}`,
-          nome: data?.usuario?.nome || auth0User.name || (auth0User.email ? auth0User.email.split('@')[0] : 'Cliente'),
-          email: data?.usuario?.email || auth0User.email || '',
+          id: data?.usuario?.id || auth0Sub,
+          nome: data?.usuario?.nome || auth0Name || (auth0Email ? auth0Email.split('@')[0] : 'Cliente'),
+          email: data?.usuario?.email || auth0Email,
           telefone: data?.usuario?.telefone || '',
           perfil: 'cliente',
           provider: 'auth0',
         };
 
         localStorage.setItem('usuario', JSON.stringify(usuarioCliente));
-        setUsuario(usuarioCliente);
+        setUsuario((atual) => (
+          atual?.id === usuarioCliente.id &&
+          atual?.email === usuarioCliente.email &&
+          atual?.perfil === usuarioCliente.perfil
+            ? atual
+            : usuarioCliente
+        ));
       } catch {
         const usuarioCliente = {
-          id: auth0User.sub || `auth0-${Date.now()}`,
-          nome: auth0User.name || (auth0User.email ? auth0User.email.split('@')[0] : 'Cliente'),
-          email: auth0User.email || '',
+          id: auth0Sub,
+          nome: auth0Name || (auth0Email ? auth0Email.split('@')[0] : 'Cliente'),
+          email: auth0Email,
           telefone: '',
           perfil: 'cliente',
           provider: 'auth0',
         };
         localStorage.setItem('usuario', JSON.stringify(usuarioCliente));
-        setUsuario(usuarioCliente);
+        setUsuario((atual) => (
+          atual?.id === usuarioCliente.id &&
+          atual?.email === usuarioCliente.email &&
+          atual?.perfil === usuarioCliente.perfil
+            ? atual
+            : usuarioCliente
+        ));
       } finally {
+        ultimaContaAuth0Sincronizada.current = chaveContaAuth0;
         setAuth0Sincronizado(true);
       }
     };
 
     sincronizarAuth0();
-  }, [auth0Configurado, auth0Loading, isAuthenticated, auth0User]);
+  }, [auth0Configurado, auth0Loading, isAuthenticated, auth0Sub, auth0Email, auth0Name]);
 
   const entrar = async (email, perfil, extras = {}) => {
     const novoUsuario = {
