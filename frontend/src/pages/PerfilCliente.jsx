@@ -19,8 +19,19 @@ const statusColor = {
   entregue: 'text-accent bg-accent/10',
   pendente: 'text-primary bg-primary-light',
   preparando: 'text-primary bg-primary-light',
+  pronto: 'text-primary bg-primary-light',
   entregando: 'text-primary bg-primary-light',
   cancelado: 'text-red-500 bg-red-50',
+}
+
+const statusLabel = {
+  pendente: 'Pendente',
+  confirmado: 'Confirmado',
+  preparando: 'Preparando',
+  pronto: 'Pronto para entrega',
+  entregando: 'A caminho',
+  entregue: 'Entregue',
+  cancelado: 'Cancelado',
 }
 
 function SecaoCard({ titulo, children, delay = 0, id }) {
@@ -53,6 +64,23 @@ function obterIniciais(nome = '') {
   if (!partes.length) return 'U'
   if (partes.length === 1) return partes[0].charAt(0).toUpperCase()
   return `${partes[0].charAt(0)}${partes[partes.length - 1].charAt(0)}`.toUpperCase()
+}
+
+function numeroPedido(id) {
+  return `#${String(id || '').replace(/^ped_/, '').slice(-6).toUpperCase()}`
+}
+
+function formatarItensPedido(itens) {
+  let lista = itens
+  if (typeof lista === 'string') {
+    try { lista = JSON.parse(lista) } catch { return lista || 'Itens do pedido' }
+  }
+  if (!Array.isArray(lista) || !lista.length) return 'Itens do pedido'
+  return lista.map((item) => {
+    const nome = item?.nome || item?.name || item?.titulo || item?.id || 'Item'
+    const quantidade = Number(item?.quantidade || item?.qtd || 1)
+    return `${quantidade > 1 ? `${quantidade}x ` : ''}${nome}`
+  }).join(', ')
 }
 
 
@@ -173,14 +201,20 @@ export default function PerfilCliente() {
 
   useEffect(() => {
     let ativo = true
+    let intervalo = null
 
-    async function carregarPerfil() {
-      setCarregando(true)
+    const carregarPerfil = async ({ silencioso = false } = {}) => {
+      if (!usuario?.id) {
+        setCarregando(false)
+        return
+      }
+      if (!silencioso) {
+        setCarregando(true)
+      }
       try {
         const [listaPedidos, cliente] = await Promise.all([
-          api.pedidos.listar({ clienteId: usuario?.id }).catch(() => []),
+          api.pedidos.listar({ clienteId: usuario.id }).catch(() => []),
           api.clientes.meuPerfil().catch(async () => {
-            // Cliente não existe no backend ainda — cria automaticamente
             try {
               return await api.clientes.cadastrarInicial()
             } catch {
@@ -215,14 +249,23 @@ export default function PerfilCliente() {
       } catch (err) {
         console.warn('Erro ao carregar perfil:', err)
       } finally {
-        if (ativo) setCarregando(false)
+        if (ativo && !silencioso) setCarregando(false)
       }
     }
 
-    if (usuario?.id) carregarPerfil()
-    else setCarregando(false)
+    carregarPerfil()
+    intervalo = setInterval(() => carregarPerfil({ silencioso: true }), 12000)
 
-    return () => { ativo = false }
+    const atualizarAoVoltar = () => {
+      if (document.visibilityState === 'visible') carregarPerfil({ silencioso: true })
+    }
+    document.addEventListener('visibilitychange', atualizarAoVoltar)
+
+    return () => {
+      ativo = false
+      if (intervalo) clearInterval(intervalo)
+      document.removeEventListener('visibilitychange', atualizarAoVoltar)
+    }
   }, [usuario?.id])
 
   const pedidosFormatados = pedidos.map((pedido) => {
@@ -236,9 +279,11 @@ export default function PerfilCliente() {
 
     return {
       id: pedido.id,
-      loja: pedido.loja || pedido.restaurante_nome || `Pedido #${String(pedido.id || '').slice(0, 6)}`,
-      status: pedido.status || 'Em andamento',
-      itens: pedido.itens_texto || itensTexto,
+      numero: numeroPedido(pedido.id),
+      loja: pedido.loja || pedido.restaurante_nome || `Pedido ${numeroPedido(pedido.id)}`,
+      status: statusLabel[pedido.status] || pedido.status || 'Em andamento',
+      statusOriginal: pedido.status || '',
+      itens: pedido.itens_texto || formatarItensPedido(pedido.itens) || itensTexto,
       data: pedido.created_at ? formatarDataBanco(pedido.created_at) : '—',
       total: Number(pedido.total || 0),
       avaliacao: pedido.avaliacao || pedido.avaliacao_restaurante || 0,
@@ -402,6 +447,7 @@ export default function PerfilCliente() {
                 {pedidosFormatados.map((pedido, i) => (
                   <Motion.div key={pedido.id}
                     className="flex items-center gap-4 px-5 py-4 hover:bg-surface-2 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/pedido/${pedido.id}`)}
                     initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.25 + i * 0.07 }}
                   >
@@ -411,7 +457,7 @@ export default function PerfilCliente() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="font-display text-sm font-bold text-text-primary">{pedido.loja}</span>
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${statusColor[pedido.status] || 'text-text-secondary bg-surface-2'}`}>{pedido.status}</span>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${statusColor[pedido.statusOriginal] || statusColor[pedido.status] || 'text-text-secondary bg-surface-2'}`}>{pedido.status}</span>
                       </div>
                       <p className="text-xs text-text-muted font-semibold truncate">{pedido.itens}</p>
                       <div className="flex items-center gap-3 mt-1">
@@ -428,10 +474,10 @@ export default function PerfilCliente() {
                     ) : (
                       <button
                         type="button"
-                        onClick={() => navigate(`/pedido/${pedido.id}`)}
+                        onClick={(event) => { event.stopPropagation(); navigate(`/pedido/${pedido.id}`) }}
                         className="text-xs font-bold text-primary border border-primary rounded-full px-3 py-1 hover:bg-primary-light transition-all cursor-pointer bg-transparent shrink-0"
                       >
-                        {String(pedido.status).toLowerCase() === 'entregue' ? 'Avaliar' : 'Ver pedido'}
+                        {String(pedido.statusOriginal).toLowerCase() === 'entregue' ? 'Avaliar' : 'Ver pedido'}
                       </button>
                     )}
                   </Motion.div>

@@ -25,6 +25,23 @@ const statusConfig = {
   'Cancelado':  { cor: 'text-red-500 bg-red-50', icon: XCircle },
 }
 
+function numeroPedido(id) {
+  return `#${String(id || '').replace(/^ped_/, '').slice(-6).toUpperCase()}`
+}
+
+function formatarItensPedido(itens) {
+  let lista = itens
+  if (typeof lista === 'string') {
+    try { lista = JSON.parse(lista) } catch { return lista || 'Itens do pedido' }
+  }
+  if (!Array.isArray(lista) || !lista.length) return 'Itens do pedido'
+  return lista.map((item) => {
+    const nome = item?.nome || item?.name || item?.titulo || item?.id || 'Item'
+    const quantidade = Number(item?.quantidade || item?.qtd || 1)
+    return `${quantidade > 1 ? `${quantidade}x ` : ''}${nome}`
+  }).join(', ')
+}
+
 // ── Navbar ────────────────────────────────────────────────────────────────────
 function NavbarGerente({ usuario }) {
   const location = useLocation()
@@ -185,15 +202,15 @@ function PainelPrincipal({ usuario }) {
     // Pedidos recentes
     api.pedidos.listar().then(lista => {
       const recentes = lista.slice(0, 5).map(p => ({
-        id: `#${String(p.id).slice(-4)}`,
-        cliente: p.cliente_id,
+        id: numeroPedido(p.id),
+        cliente: p.cliente_nome || p.cliente_id,
         valor: Number(p.total),
         status: ['pendente','confirmado','preparando'].includes(p.status) ? 'Preparando'
               : p.status === 'entregando' ? 'Entregando'
               : p.status === 'entregue'   ? 'Entregue'
               : 'Cancelado',
         horario: formatarHoraBanco(p.created_at),
-        itens: (() => { try { return JSON.parse(p.itens).map(i => i.nome || i.id).join(', ') } catch { return '' } })(),
+        itens: formatarItensPedido(p.itens),
       }))
       setPedidosRecentes(recentes)
 

@@ -21,22 +21,37 @@ const statusParaBanco = {
   Cancelado:  'cancelado',
 }
 
+function numeroPedido(id) {
+  return `#${String(id || '').replace(/^ped_/, '').slice(-6).toUpperCase()}`
+}
+
+function formatarItensPedido(itens) {
+  let lista = itens
+  if (typeof lista === 'string') {
+    try { lista = JSON.parse(lista) } catch { return lista ? [lista] : [] }
+  }
+  if (!Array.isArray(lista)) return []
+  return lista.map((item) => {
+    const nome = item?.nome || item?.name || item?.titulo || item?.id || 'Item'
+    const quantidade = Number(item?.quantidade || item?.qtd || 1)
+    return `${quantidade > 1 ? `${quantidade}x ` : ''}${nome}`
+  })
+}
+
 function normalizarPedido(p) {
   return {
     ...p,
+    numero: numeroPedido(p.id),
     status: ['pendente', 'confirmado', 'preparando'].includes(p.status) ? 'Preparando'
           : p.status === 'entregando' ? 'Entregando'
           : p.status === 'entregue'   ? 'Entregue'
           : p.status === 'cancelado'  ? 'Cancelado'
           : 'Preparando',
-    loja: p.restaurante_id,
-    cliente: p.cliente_id,
+    loja: p.restaurante_nome || p.restaurante_id,
+    cliente: p.cliente_nome || p.cliente_id,
     valorNum: Number(p.total),
     horario: formatarHoraBanco(p.created_at),
-    itens: (() => {
-      try { return typeof p.itens === 'string' ? JSON.parse(p.itens).map(i => i.nome || i.id) : (p.itens || []) }
-      catch { return [] }
-    })(),
+    itens: formatarItensPedido(p.itens),
     tempo: p.tempo_preparo_estimado ? `${p.tempo_preparo_estimado} min` : '--',
   }
 }
@@ -57,7 +72,7 @@ export default function PedidosGerente() {
   }, [])
 
   const pedidosFiltrados = pedidos.filter(p => {
-    const buscaOk = p.id.toLowerCase().includes(busca.toLowerCase()) || p.cliente.toLowerCase().includes(busca.toLowerCase())
+    const buscaOk = p.id.toLowerCase().includes(busca.toLowerCase()) || p.numero.toLowerCase().includes(busca.toLowerCase()) || p.cliente.toLowerCase().includes(busca.toLowerCase())
     const statusOk = filtroStatus === 'Todos' || p.status === filtroStatus
     return buscaOk && statusOk
   })
@@ -155,12 +170,12 @@ export default function PedidosGerente() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-display font-bold text-text-primary">#{String(p.id).slice(-6)}</span>
+                      <span className="font-display font-bold text-text-primary">{p.numero}</span>
                       <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full border ${cor}`}>
                         <Icone size={11} />{p.status}
                       </span>
                     </div>
-                    <p className="text-sm text-text-secondary font-semibold truncate mt-0.5">{p.cliente} · {p.itens.join(', ')}</p>
+                    <p className="text-sm text-text-secondary font-semibold truncate mt-0.5">{p.cliente} · {p.itens.join(', ') || 'Itens do pedido'}</p>
                   </div>
                   <div className="text-right shrink-0 flex flex-col items-end gap-1">
                     <span className="font-display font-extrabold text-accent">R$ {p.valorNum.toFixed(2).replace('.', ',')}</span>
@@ -182,7 +197,7 @@ export default function PedidosGerente() {
                         <div className="flex-1">
                           <p className="text-xs font-bold text-text-muted uppercase tracking-wider mb-2">Itens do pedido</p>
                           <ul className="flex flex-col gap-1">
-                            {p.itens.map((item, idx) => (
+                            {(p.itens.length ? p.itens : ['Itens do pedido']).map((item, idx) => (
                               <li key={idx} className="text-sm text-text-secondary font-semibold flex items-center gap-2">
                                 <span className="w-1.5 h-1.5 bg-primary rounded-full shrink-0" />{item}
                               </li>

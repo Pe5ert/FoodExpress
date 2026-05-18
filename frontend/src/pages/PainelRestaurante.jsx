@@ -23,6 +23,27 @@ const statusConfig = {
 
 const proximoStatus = { pendente: 'confirmado', confirmado: 'preparando', preparando: 'pronto' }
 
+function numeroPedido(id) {
+  return `#${String(id || '').replace(/^ped_/, '').slice(-6).toUpperCase()}`
+}
+
+function formatarMoeda(valor) {
+  return Number(valor || 0).toFixed(2).replace('.', ',')
+}
+
+function formatarItensPedido(itens) {
+  let lista = itens
+  if (typeof lista === 'string') {
+    try { lista = JSON.parse(lista) } catch { return lista || 'Itens do pedido' }
+  }
+  if (!Array.isArray(lista) || !lista.length) return 'Itens do pedido'
+  return lista.map((item) => {
+    const nome = item?.nome || item?.name || item?.titulo || item?.id || 'Item'
+    const quantidade = Number(item?.quantidade || item?.qtd || 1)
+    return `${quantidade > 1 ? `${quantidade}x ` : ''}${nome}`
+  }).join(', ')
+}
+
 // ── Navbar ───────────────────────────────────────────────────────────────────
 function NavbarRestaurante({ restaurante }) {
   const { sair } = useAuth()
@@ -84,7 +105,7 @@ function AbaPedidos({ restauranteId, avaliacao }) {
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
         {[
           { label: 'Pedidos ativos',   valor: ativos.length,                      Icon: Package,   cor: 'text-primary' },
-          { label: 'Faturamento hoje', valor: `R$ ${faturamentoHoje.toFixed(2)}`, Icon: DollarSign, cor: 'text-accent' },
+          { label: 'Faturamento hoje', valor: `R$ ${formatarMoeda(faturamentoHoje)}`, Icon: DollarSign, cor: 'text-accent' },
           { label: 'Avaliação média',  valor: `${avaliacao ?? '—'} ★`,            Icon: Star,       cor: 'text-accent' },
         ].map(({ label, valor, Icon, cor }) => (
           <div key={label} className="bg-white rounded-2xl border border-border shadow-sm p-5">
@@ -108,11 +129,7 @@ function AbaPedidos({ restauranteId, avaliacao }) {
           {pedidos.map((pedido, i) => {
             const cfg = statusConfig[pedido.status] || statusConfig.pendente
             const proximo = proximoStatus[pedido.status]
-            let itensTexto = ''
-            try {
-              const itens = typeof pedido.itens === 'string' ? JSON.parse(pedido.itens) : pedido.itens
-              if (Array.isArray(itens)) itensTexto = itens.map(it => it.nome || it.id).join(', ')
-            } catch {}
+            const itensTexto = formatarItensPedido(pedido.itens)
 
             return (
               <Motion.div key={pedido.id}
@@ -121,7 +138,8 @@ function AbaPedidos({ restauranteId, avaliacao }) {
               >
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <p className="text-xs text-text-muted font-semibold">#{String(pedido.id).slice(-6)}</p>
+                    <p className="text-xs text-text-muted font-semibold">{numeroPedido(pedido.id)}</p>
+                    <p className="text-sm font-bold text-text-primary mt-0.5">{pedido.cliente_nome || pedido.cliente_id || 'Cliente'}</p>
                     <p className="text-xs text-text-muted mt-0.5">
                       {formatarHoraBanco(pedido.created_at)}
                     </p>
@@ -132,7 +150,7 @@ function AbaPedidos({ restauranteId, avaliacao }) {
                 </div>
                 {itensTexto && <p className="text-xs text-text-secondary font-semibold mb-1 truncate">🛍️ {itensTexto}</p>}
                 {pedido.endereco_entrega && <p className="text-xs text-text-muted font-semibold mb-1">📍 {pedido.endereco_entrega}</p>}
-                <p className="font-display text-xl font-extrabold text-primary mb-3">R$ {Number(pedido.total).toFixed(2)}</p>
+                <p className="font-display text-xl font-extrabold text-primary mb-3">R$ {formatarMoeda(pedido.total)}</p>
                 {proximo && (
                   <button
                     onClick={() => avancarStatus(pedido.id, proximo)}

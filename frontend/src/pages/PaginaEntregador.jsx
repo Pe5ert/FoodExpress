@@ -49,6 +49,7 @@ function numeroPedido(id, tamanho = 6) {
 
 function normalizarEntregaAtiva(p) {
   const clienteNome = valorTexto(p.cliente_nome || p.cliente_id, 'Cliente')
+  const ganho = Number(p.taxa_entrega ?? 0) || Number(p.total || 0) * 0.2
   return {
     id: numeroPedido(p.id, 4),
     cliente: {
@@ -71,7 +72,7 @@ function normalizarEntregaAtiva(p) {
       longitude: Number(p.longitude_entrega || 0),
     },
     itens: formatarItensPedido(p.itens),
-    valor: p.total,
+    valor: ganho,
     distancia: p.distancia_km ? `${Number(p.distancia_km).toFixed(1)} km` : '--',
     tempoEstimado: p.tempo_entrega_estimado ? `${p.tempo_entrega_estimado} min` : '--',
     etapa: 'coletando',
@@ -81,17 +82,21 @@ function normalizarEntregaAtiva(p) {
 
 // ── Mini mapa SVG ─────────────────────────────────────────────────────────────
 function MiniMapa({ etapa, localizacao, entrega }) {
-  const entregadorX = etapa === 'coletando' ? 60 : 200
+  const destinoAtual = etapa === 'coletando' ? entrega?.loja : entrega?.destino
+  const destinoCoords = destinoAtual?.latitude && destinoAtual?.longitude
+    ? `${destinoAtual.latitude},${destinoAtual.longitude}`
+    : ''
+  const destinoTexto = destinoCoords || destinoAtual?.rua || destinoAtual?.endereco || entrega?.destino?.rua || ''
+  const origem = localizacao?.latitude && localizacao?.longitude
+    ? `${localizacao.latitude},${localizacao.longitude}`
+    : ''
+  const embedUrl = destinoTexto
+    ? `https://maps.google.com/maps?q=${encodeURIComponent(destinoTexto)}&z=15&output=embed`
+    : origem
+      ? `https://maps.google.com/maps?q=${encodeURIComponent(origem)}&z=15&output=embed`
+      : ''
 
   const abrirMaps = () => {
-    const destinoAtual = etapa === 'coletando' ? entrega?.loja : entrega?.destino
-    const destinoCoords = destinoAtual?.latitude && destinoAtual?.longitude
-      ? `${destinoAtual.latitude},${destinoAtual.longitude}`
-      : ''
-    const destinoTexto = destinoCoords || destinoAtual?.rua || destinoAtual?.endereco || entrega?.destino?.rua || ''
-    const origem = localizacao?.latitude && localizacao?.longitude
-      ? `${localizacao.latitude},${localizacao.longitude}`
-      : ''
     const url = destinoTexto
       ? `https://www.google.com/maps/dir/?api=1${origem ? `&origin=${origem}` : ''}&destination=${encodeURIComponent(destinoTexto)}&travelmode=driving`
       : origem
@@ -101,42 +106,42 @@ function MiniMapa({ etapa, localizacao, entrega }) {
   }
 
   return (
-    <div className="relative w-full h-44 rounded-2xl overflow-hidden bg-[#e8f0e8] cursor-pointer group" onClick={abrirMaps}>
-      <svg viewBox="0 0 400 160" className="w-full h-full" preserveAspectRatio="xMidYMid slice">
-        <rect width="400" height="160" fill="#e8f0e8" />
-        {[
-          [10,10,80,60],[110,10,80,60],[210,10,80,60],[310,10,80,60],
-          [10,90,80,60],[110,90,80,60],[210,90,80,60],[310,90,80,60],
-        ].map(([x, y, w, h], i) => (
-          <rect key={i} x={x} y={y} width={w} height={h} fill="#d4e4d4" rx="4" />
-        ))}
-        <rect x="0" y="70" width="400" height="18" fill="#f5f5f0" />
-        <rect x="95" y="0" width="18" height="160" fill="#f5f5f0" />
-        <rect x="195" y="0" width="18" height="160" fill="#f5f5f0" />
-        <rect x="295" y="0" width="18" height="160" fill="#f5f5f0" />
-        <polyline points="60,79 104,79 204,79 304,79 304,40" fill="none"
-          stroke="#ff6b35" strokeWidth="3" strokeDasharray="6,4" strokeLinecap="round" />
-        <circle cx="60" cy="79" r="10" fill="#2e294e" />
-        <text x="60" y="83" textAnchor="middle" fontSize="10" fill="white">🍕</text>
-        <circle cx="304" cy="40" r="10" fill="#ff6b35" />
-        <text x="304" y="44" textAnchor="middle" fontSize="10" fill="white">🏠</text>
-        <Motion.circle cx={entregadorX} cy="79" r="8" fill="#1b998b"
-          animate={{ cx: entregadorX }} transition={{ duration: 1.2, ease: 'easeInOut' }} />
-        <Motion.text x={entregadorX} y="83" textAnchor="middle" fontSize="9" fill="white"
-          animate={{ x: entregadorX }} transition={{ duration: 1.2, ease: 'easeInOut' }}>🛵</Motion.text>
-      </svg>
-      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all flex items-center justify-center">
-        <div className="opacity-0 group-hover:opacity-100 transition-all bg-white text-text-primary text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
-          <MapPin size={12} /> Abrir no Google Maps
+    <div className="relative w-full h-56 rounded-2xl overflow-hidden bg-surface-2 border border-border group">
+      {embedUrl ? (
+        <iframe
+          title="Mapa da entrega"
+          src={embedUrl}
+          className="absolute inset-0 w-full h-full border-0"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
+      ) : (
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+          <MapPin size={28} className="text-primary mb-2" />
+          <p className="text-sm font-bold text-text-primary">Destino não informado</p>
+          <p className="text-xs font-semibold text-text-muted mt-1">Assim que houver endereço, a rota aparece aqui.</p>
+        </div>
+      )}
+      <div className="absolute inset-x-0 top-0 p-3 bg-gradient-to-b from-black/35 to-transparent pointer-events-none">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-xs font-extrabold text-text-primary shadow-sm">
+          <Navigation size={13} className="text-primary" />
+          {etapa === 'coletando' ? 'Rota até a loja' : 'Rota até o cliente'}
         </div>
       </div>
+      <button
+        type="button"
+        onClick={abrirMaps}
+        className="absolute right-3 bottom-3 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-extrabold text-white shadow-lg border-none hover:bg-primary/90 transition-colors"
+      >
+        <MapPin size={13} /> Abrir rota
+      </button>
       {localizacao && (
         <div className="absolute top-2 right-2 bg-accent text-white text-[10px] font-extrabold px-2 py-1 rounded-full flex items-center gap-1">
           <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
           GPS ativo
         </div>
       )}
-      <div className="absolute bottom-2 left-3 flex items-center gap-3 bg-white/80 backdrop-blur-sm rounded-lg px-2 py-1">
+      <div className="absolute bottom-3 left-3 flex items-center gap-2 bg-white/95 backdrop-blur-sm rounded-full px-3 py-1.5 shadow-sm">
         <div className="flex items-center gap-1 text-[10px] font-bold text-secondary">
           <div className="w-2 h-2 rounded-full bg-secondary" /> Loja
         </div>
@@ -447,6 +452,8 @@ export default function PaginaEntregador() {
   const [tendenciaSemana, setTendenciaSemana] = useState(null)
   const [entregadorId, setEntregadorId] = useState(null)
   const [avaliacaoEntregador, setAvaliacaoEntregador] = useState(0)
+  const [refreshEntregas, setRefreshEntregas] = useState(0)
+  const [ganhoEntregaConcluida, setGanhoEntregaConcluida] = useState(0)
 
   useEffect(() => {
     // Busca ou cria dados do entregador logado
@@ -498,7 +505,7 @@ export default function PaginaEntregador() {
         id: numeroPedido(p.id, 4),
         loja: p.restaurante_nome || p.restaurante_id, emoji: '🍽️',
         cliente: p.cliente_nome || p.cliente_id,
-        valor: p.total,
+        valor: Number(p.taxa_entrega ?? 0) || Number(p.total || 0) * 0.2,
         tempo: p.tempo_entrega_estimado ? `${p.tempo_entrega_estimado} min` : '--',
         avaliacao: Number(p.avaliacao_entregador || 0),
         horario: formatarHoraBanco(p.created_at),
@@ -556,7 +563,7 @@ export default function PaginaEntregador() {
           id: numeroPedido(p.id, 4),
           loja: p.restaurante_nome || p.restaurante_id, emoji: '🍽️',
           cliente: p.cliente_nome || p.cliente_id,
-          valor: p.total,
+          valor: Number(p.taxa_entrega ?? 0) || Number(p.total || 0) * 0.2,
           tempo: p.tempo_entrega_estimado ? `${p.tempo_entrega_estimado} min` : '--',
           avaliacao: Number(p.avaliacao_entregador || 0),
           horario: formatarHoraBanco(p.created_at),
@@ -582,7 +589,7 @@ export default function PaginaEntregador() {
           { label: 'Avaliação', valor: '—', icon: Star, cor: 'text-yellow-500', bg: 'bg-yellow-50', variacao: 'média' },
         ])
       })
-  }, [entregadorId, avaliacaoEntregador])
+  }, [entregadorId, avaliacaoEntregador, refreshEntregas])
 
 
 
@@ -630,6 +637,8 @@ export default function PaginaEntregador() {
       setFila(prev => prev.filter(x => x._id !== pedido._id))
       setOnline(true)
     } catch (e) {
+      setFila(prev => prev.filter(x => x._id !== pedido._id))
+      carregarFilaDisponivel()
       setLocErro(e.message || 'Não foi possível aceitar o pedido.')
     }
   }
@@ -714,8 +723,10 @@ export default function PaginaEntregador() {
           await api.entregadores.atualizarDisponibilidade(entregadorId, true).catch(console.error)
         }
       }
+      setGanhoEntregaConcluida(Number(entrega.valor || 0))
       setEntregaAtiva(null)
       setEntregaConcluida(true)
+      setRefreshEntregas(v => v + 1)
       setTimeout(() => setEntregaConcluida(false), 3000)
       setEtapa('coletando')
     }
@@ -734,7 +745,7 @@ export default function PaginaEntregador() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.9 }}
           >
-            <CheckCircle size={18} /> Entrega concluída com sucesso!
+            <CheckCircle size={18} /> Entrega concluída · + R$ {ganhoEntregaConcluida.toFixed(2).replace('.', ',')}
           </Motion.div>
         )}
       </AnimatePresence>

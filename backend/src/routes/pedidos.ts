@@ -94,7 +94,21 @@ router.get('/disponiveis', requireAuth, async (req: AuthRequest, res: Response) 
 // GET /api/pedidos/:id
 router.get('/:id', async (req, res: Response) => {
   try {
-    const result = await db.execute({ sql: 'SELECT * FROM pedidos WHERE id = ?', args: [req.params.id] })
+    const result = await db.execute({
+      sql: `SELECT p.*,
+                   r.nome as restaurante_nome,
+                   r.endereco as restaurante_endereco,
+                   c.nome as cliente_nome,
+                   c.telefone as cliente_telefone,
+                   e.nome as entregador_nome,
+                   e.telefone as entregador_telefone
+            FROM pedidos p
+            LEFT JOIN restaurantes r ON r.id = p.restaurante_id
+            LEFT JOIN clientes c ON c.id = p.cliente_id
+            LEFT JOIN entregadores e ON e.id = p.entregador_id
+            WHERE p.id = ?`,
+      args: [req.params.id]
+    })
     if (!result.rows.length) return res.status(404).json({ erro: 'Pedido não encontrado' }) as any
     res.json(result.rows[0])
   } catch (error) {
@@ -187,6 +201,8 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
 router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { status, tempo_preparo_estimado } = req.body
+    const pedidoAntes = await db.execute({ sql: 'SELECT status, entregador_id FROM pedidos WHERE id = ?', args: [req.params.id] })
+    const statusAnterior = (pedidoAntes.rows[0] as any)?.status
     const sets: string[] = ['updated_at = current_timestamp']
     const args: any[] = []
     if (status) {
@@ -199,9 +215,8 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     if (tempo_preparo_estimado !== undefined) { sets.push('tempo_preparo_estimado = ?'); args.push(tempo_preparo_estimado) }
     args.push(req.params.id)
     await db.execute({ sql: `UPDATE pedidos SET ${sets.join(', ')} WHERE id = ?`, args })
-    if (status === 'entregue') {
-      const pedido = await db.execute({ sql: 'SELECT entregador_id FROM pedidos WHERE id = ?', args: [req.params.id] })
-      const entregadorId = (pedido.rows[0] as any)?.entregador_id
+    if (status === 'entregue' && statusAnterior !== 'entregue') {
+      const entregadorId = (pedidoAntes.rows[0] as any)?.entregador_id
       if (entregadorId) {
         await db.execute({
           sql: `UPDATE entregadores
@@ -277,7 +292,18 @@ router.post('/:id/atribuir-entregador', requireAuth, async (req: AuthRequest, re
     const entregador = await db.execute({ sql: "SELECT * FROM entregadores WHERE id = ? AND status = 'disponivel'", args: [entregadorId] })
     if (!entregador.rows.length) return res.status(400).json({ erro: 'Entregador não disponível' }) as any
 
-    await db.execute({ sql: "UPDATE pedidos SET entregador_id = ?, status = 'entregando' WHERE id = ?", args: [entregadorId, req.params.id] })
+    const atribuido = await db.execute({
+      sql: `UPDATE pedidos
+            SET entregador_id = ?, status = 'entregando'
+            WHERE id = ?
+              AND (entregador_id IS NULL OR entregador_id = '')
+              AND status IN ('pendente', 'preparando', 'pronto')`,
+      args: [entregadorId, req.params.id]
+    })
+    if (!atribuido.rowsAffected) {
+      return res.status(409).json({ erro: 'Esse pedido já foi aceito por outro entregador.' }) as any
+    }
+
     await db.execute({ sql: "UPDATE entregadores SET status = 'ocupado' WHERE id = ?", args: [entregadorId] })
 
     const pedido = await db.execute({ sql: 'SELECT * FROM pedidos WHERE id = ?', args: [req.params.id] })

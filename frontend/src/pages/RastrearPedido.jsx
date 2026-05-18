@@ -10,45 +10,63 @@ import {
 } from 'lucide-react'
 
 
-// ── Mini mapa SVG (mesma lógica da PaginaEntregador) ─────────────────────────
-function MiniMapa({ progresso = 65 }) {
+// ── Mapa real ────────────────────────────────────────────────────────────────
+function MiniMapa({ dados }) {
+  const destino = dados?.destino?.localizacao
+  const entregador = dados?.entregador?.localizacao_atual
+  const destinoCoords = destino?.lat && destino?.lng ? `${destino.lat},${destino.lng}` : ''
+  const entregadorCoords = entregador?.lat && entregador?.lng ? `${entregador.lat},${entregador.lng}` : ''
+  const destinoTexto = destinoCoords || dados?.destino?.endereco || ''
+  const embedUrl = destinoTexto
+    ? `https://maps.google.com/maps?q=${encodeURIComponent(destinoTexto)}&z=15&output=embed`
+    : entregadorCoords
+      ? `https://maps.google.com/maps?q=${encodeURIComponent(entregadorCoords)}&z=15&output=embed`
+      : ''
+
+  const abrirMaps = () => {
+    const url = destinoTexto
+      ? `https://www.google.com/maps/dir/?api=1${entregadorCoords ? `&origin=${entregadorCoords}` : ''}&destination=${encodeURIComponent(destinoTexto)}&travelmode=driving`
+      : 'https://www.google.com/maps'
+    window.open(url, '_blank', 'noopener,noreferrer')
+  }
+
   return (
-    <div className="relative w-full h-52 rounded-2xl overflow-hidden bg-surface-2">
-      <svg viewBox="0 0 500 210" className="w-full h-full" preserveAspectRatio="xMidYMid slice">
-        <rect width="500" height="210" fill="#e8f0e8" />
-        {[
-          [10,10,90,60],[120,10,90,60],[230,10,90,60],[330,10,90,60],[420,10,70,60],
-          [10,90,90,60],[120,90,90,60],[230,90,90,60],[330,90,60,60],[410,90,80,60],
-          [10,165,90,40],[120,165,90,40],[230,165,90,40],[330,165,90,40],
-        ].map(([x,y,w,h], i) => <rect key={i} x={x} y={y} width={w} height={h} fill="#d4e4d4" rx="4" />)}
-        {/* Ruas */}
-        <rect x="100" y="0" width="12" height="210" fill="#fff" opacity=".6" />
-        <rect x="210" y="0" width="12" height="210" fill="#fff" opacity=".6" />
-        <rect x="320" y="0" width="12" height="210" fill="#fff" opacity=".6" />
-        <rect x="0" y="75" width="500" height="12" fill="#fff" opacity=".6" />
-        <rect x="0" y="155" width="500" height="12" fill="#fff" opacity=".6" />
-        {/* Rota */}
-        <path d="M80 190 L80 81 L215 81 L215 20 L370 20" stroke="#FF6B35" strokeWidth="3" fill="none" strokeLinecap="round" strokeDasharray="6 4" opacity=".7" />
-        {/* Progresso da rota */}
-        <path d={`M80 190 L80 81 L${80 + (progresso/100)*290} 81`} stroke="#FF6B35" strokeWidth="3.5" fill="none" strokeLinecap="round" />
-        {/* Restaurante */}
-        <circle cx="370" cy="20" r="9" fill="#2E294E" />
-        <text x="370" y="24" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">R</text>
-        {/* Entregador */}
-        <circle cx={80 + (progresso/100)*130} cy="81" r="10" fill="#FF6B35" />
-        <text x={80 + (progresso/100)*130} y="86" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">E</text>
-        {/* Destino */}
-        <circle cx="80" cy="190" r="9" fill="#22c55e" />
-        <text x="80" y="195" textAnchor="middle" fill="white" fontSize="9" fontWeight="bold">D</text>
-      </svg>
-      {/* Legenda */}
-      <div className="absolute bottom-3 left-3 flex gap-3">
+    <div className="relative w-full h-72 rounded-2xl overflow-hidden bg-surface-2 border border-border">
+      {embedUrl ? (
+        <iframe
+          title="Mapa do rastreamento"
+          src={embedUrl}
+          className="absolute inset-0 w-full h-full border-0"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
+      ) : (
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+          <MapPin size={30} className="text-primary mb-2" />
+          <p className="text-sm font-bold text-text-primary">Mapa indisponível</p>
+          <p className="text-xs font-semibold text-text-muted mt-1">Ainda não há localização para este pedido.</p>
+        </div>
+      )}
+      <div className="absolute inset-x-0 top-0 p-3 bg-gradient-to-b from-black/35 to-transparent">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-white/95 px-3 py-1.5 text-xs font-extrabold text-text-primary shadow-sm">
+          <Navigation size={13} className="text-primary" />
+          Acompanhamento da entrega
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={abrirMaps}
+        className="absolute right-3 bottom-3 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-xs font-extrabold text-white shadow-lg border-none hover:bg-primary/90 transition-colors"
+      >
+        <MapPin size={13} /> Abrir rota
+      </button>
+      <div className="absolute bottom-3 left-3 flex gap-2">
         {[
           { cor: 'bg-secondary', label: 'Restaurante' },
           { cor: 'bg-primary',   label: 'Entregador' },
           { cor: 'bg-accent',    label: 'Destino' },
         ].map(({ cor, label }) => (
-          <div key={label} className="flex items-center gap-1 bg-white/80 rounded-full px-2 py-0.5">
+          <div key={label} className="flex items-center gap-1 bg-white/95 rounded-full px-2.5 py-1 shadow-sm">
             <div className={`w-2 h-2 rounded-full ${cor}`} />
             <span className="text-[10px] font-bold text-text-primary">{label}</span>
           </div>
@@ -169,7 +187,7 @@ export default function RastrearPedido() {
               className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden"
               initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
             >
-              <MiniMapa progresso={d?.rota?.progresso_percentual} />
+              <MiniMapa dados={d} />
             </Motion.div>
 
             {/* Progresso + stats */}

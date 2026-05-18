@@ -16,10 +16,23 @@ const timeline = [
   { step: 'pendente',   label: 'Pedido recebido', Icon: Package },
   { step: 'confirmado', label: 'Confirmado',      Icon: Clock },
   { step: 'preparando', label: 'Preparando',      Icon: Clock },
+  { step: 'pronto',     label: 'Pronto para entrega', Icon: CheckCircle },
   { step: 'entregando', label: 'A caminho',        Icon: Truck },
   { step: 'entregue',   label: 'Entregue',         Icon: CheckCircle },
 ]
 const stepOrder = timeline.map(t => t.step)
+
+function formatarMoeda(valor) {
+  return Number(valor || 0).toFixed(2).replace('.', ',')
+}
+
+function formatarItensPedido(itens) {
+  let lista = itens
+  if (typeof lista === 'string') {
+    try { lista = JSON.parse(lista) } catch { return [] }
+  }
+  return Array.isArray(lista) ? lista : []
+}
 
 export default function DetalhesPedido() {
   const { id } = useParams()
@@ -28,23 +41,56 @@ export default function DetalhesPedido() {
   const [carregando, setCarregando] = useState(true)
 
   useEffect(() => {
-    api.pedidos.buscarPorId(id)
-      .then(p => {
-        // Normaliza itens que podem vir como string JSON
-        if (typeof p.itens === 'string') {
-          try { p.itens = JSON.parse(p.itens) } catch { p.itens = [] }
-        }
+    let ativo = true
+    let intervalo = null
+
+    const carregarPedido = async ({ silencioso = false } = {}) => {
+      if (!silencioso) setCarregando(true)
+      try {
+        const p = await api.pedidos.buscarPorId(id)
+        if (!ativo) return
+        p.itens = formatarItensPedido(p.itens)
         setPedido(p)
-      })
-      .catch(console.error)
-      .finally(() => setCarregando(false))
+        if (['entregue', 'cancelado'].includes(String(p.status))) {
+          if (intervalo) {
+            clearInterval(intervalo)
+            intervalo = null
+          }
+        }
+      } catch (error) {
+        console.error(error)
+      } finally {
+        if (ativo && !silencioso) setCarregando(false)
+      }
+    }
+
+    carregarPedido()
+    intervalo = setInterval(() => carregarPedido({ silencioso: true }), 8000)
+
+    const atualizarAoVoltar = () => {
+      if (document.visibilityState === 'visible') carregarPedido({ silencioso: true })
+    }
+    document.addEventListener('visibilitychange', atualizarAoVoltar)
+
+    return () => {
+      ativo = false
+      if (intervalo) clearInterval(intervalo)
+      document.removeEventListener('visibilitychange', atualizarAoVoltar)
+    }
   }, [id])
 
   const [estrelas, setEstrelas] = useState(5)
   const [comentario, setComentario] = useState('')
   const [avaliacaoEnviada, setAvaliacaoEnviada] = useState(false)
+  const [avaliacaoEntregadorEnviada, setAvaliacaoEntregadorEnviada] = useState(false)
   const [enviandoAvaliacao, setEnviandoAvaliacao] = useState(false)
   const [erroAvaliacao, setErroAvaliacao] = useState('')
+
+  useEffect(() => {
+    if (!pedido) return
+    setAvaliacaoEnviada(Boolean(pedido.avaliacao_restaurante))
+    setAvaliacaoEntregadorEnviada(Boolean(pedido.avaliacao_entregador))
+  }, [pedido?.id, pedido?.avaliacao_restaurante, pedido?.avaliacao_entregador])
 
   const enviarAvaliacao = async () => {
     if (!pedido || enviandoAvaliacao) return
@@ -72,10 +118,30 @@ export default function DetalhesPedido() {
     }
   }
 
+  const avaliarEntregador = async (nota) => {
+    if (!pedido?.entregador_id || avaliacaoEntregadorEnviada) return
+    try {
+      await api.avaliacoes.criar({
+        pedidoId: pedido.id,
+        entregadorId: pedido.entregador_id,
+        estrelas: nota,
+        tipo: 'entregador',
+      })
+      setPedido(p => p ? { ...p, avaliacao_entregador: nota } : p)
+      setAvaliacaoEntregadorEnviada(true)
+    } catch (e) {
+      if (String(e?.message || '').toLowerCase().includes('já avaliou')) {
+        setAvaliacaoEntregadorEnviada(true)
+      } else {
+        setErroAvaliacao(e?.message || 'Erro ao avaliar entregador')
+      }
+    }
+  }
+
   if (carregando) return <div className="min-h-screen flex items-center justify-center text-text-muted">Carregando pedido...</div>
   if (!pedido) return <div className="min-h-screen flex items-center justify-center text-text-muted">Pedido não encontrado</div>
 
-  const currentIndex = stepOrder.indexOf(pedido.status)
+  const currentIndex = pedido.status === 'cancelado' ? -1 : stepOrder.indexOf(pedido.status)
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
@@ -164,15 +230,15 @@ export default function DetalhesPedido() {
             <div className="flex flex-col gap-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-text-muted font-semibold">Subtotal</span>
-                <span className="font-bold">R$ {Number(pedido.subtotal).toFixed(2)}</span>
+                <span className="font-bold">R$ {formatarMoeda(pedido.subtotal)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-text-muted font-semibold">Taxa de entrega</span>
-                <span className="font-bold">R$ {Number(pedido.taxa_entrega).toFixed(2)}</span>
+                <span className="font-bold">R$ {formatarMoeda(pedido.taxa_entrega)}</span>
               </div>
               <div className="flex justify-between pt-2 border-t border-border">
                 <span className="font-extrabold text-text-primary">Total</span>
-                <span className="font-extrabold text-primary">R$ {Number(pedido.total).toFixed(2)}</span>
+                <span className="font-extrabold text-primary">R$ {formatarMoeda(pedido.total)}</span>
               </div>
             </div>
           </Motion.div>
@@ -190,11 +256,11 @@ export default function DetalhesPedido() {
             {pedido.itens.map((item, i) => (
               <div key={i} className="flex justify-between items-center py-3 border-b border-border last:border-0">
                 <div>
-                  <p className="text-sm font-bold text-text-primary">{item.nome}</p>
+                  <p className="text-sm font-bold text-text-primary">{item.nome || item.name || item.id || 'Item'}</p>
                   <p className="text-xs text-text-muted font-semibold">Qtd: {item.quantidade}</p>
                 </div>
                 <p className="text-sm font-extrabold text-primary">
-                  R$ {(item.preco * item.quantidade).toFixed(2)}
+                  R$ {formatarMoeda(Number(item.preco || item.price || 0) * Number(item.quantidade || 1))}
                 </p>
               </div>
             ))}
@@ -210,6 +276,9 @@ export default function DetalhesPedido() {
             <h3 className="font-display font-extrabold text-text-primary mb-5 flex items-center gap-2">
               <Star size={16} className="text-accent" /> Avaliar Pedido
             </h3>
+            {pedido.restaurante_nome && (
+              <p className="text-sm font-bold text-text-primary mb-1">{pedido.restaurante_nome}</p>
+            )}
             <p className="text-sm text-text-muted font-semibold mb-3">Quantas estrelas você dá?</p>
             <div className="flex gap-2 mb-5">
               {[1, 2, 3, 4, 5].map(s => (
@@ -239,6 +308,28 @@ export default function DetalhesPedido() {
             >
               <Send size={14} /> {enviandoAvaliacao ? 'Enviando...' : 'Enviar Avaliação'}
             </button>
+          </Motion.div>
+        )}
+
+        {pedido.status === 'entregue' && pedido.entregador_id && !avaliacaoEntregadorEnviada && (
+          <Motion.div
+            className="bg-white rounded-2xl border border-border shadow-sm p-6 mt-4"
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}
+          >
+            <h3 className="font-display font-extrabold text-text-primary mb-2 flex items-center gap-2">
+              <Truck size={16} className="text-secondary" /> Avaliar Entrega
+            </h3>
+            <p className="text-sm text-text-muted font-semibold mb-3">
+              {pedido.entregador_nome ? `Como foi a entrega com ${pedido.entregador_nome}?` : 'Como foi a entrega?'}
+            </p>
+            <div className="flex gap-2">
+              {[1, 2, 3, 4, 5].map(s => (
+                <button key={s} onClick={() => avaliarEntregador(s)}
+                  className="text-3xl text-accent transition-transform hover:scale-110 bg-transparent border-none cursor-pointer">
+                  ★
+                </button>
+              ))}
+            </div>
           </Motion.div>
         )}
 
