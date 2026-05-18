@@ -1,17 +1,58 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCart } from '../contexts/CartContext'
 import { useAuth } from '../contexts/AuthContext'
-import { MapPin, CreditCard, CheckCircle, ArrowLeft, Clock, Tag, X } from 'lucide-react'
+import { MapPin, CreditCard, CheckCircle, ArrowLeft, Clock, Tag, X, QrCode, Banknote, ReceiptText, Copy, Bike, ShieldCheck } from 'lucide-react'
 import api from '../services/api'
 import { motion as Motion, AnimatePresence } from 'framer-motion'
 
 const formasPagamento = [
-  { id: 'pix',      label: 'Pix',              descricao: 'Aprovação imediata' },
-  { id: 'credito',  label: 'Cartão de Crédito', descricao: 'Até 12x sem juros' },
-  { id: 'debito',   label: 'Cartão de Débito',  descricao: 'Débito na hora' },
-  { id: 'dinheiro', label: 'Dinheiro',           descricao: 'Pague na entrega' },
+  { id: 'pix',      label: 'Pix',              descricao: 'QR Code gerado na hora', Icon: QrCode },
+  { id: 'cartao',   label: 'Cartão',           descricao: 'Maquininha com o entregador', Icon: CreditCard },
+  { id: 'dinheiro', label: 'Dinheiro',         descricao: 'Pague na entrega', Icon: Banknote },
+  { id: 'boleto',   label: 'Boleto',           descricao: 'Linha digitável para pagamento', Icon: ReceiptText },
 ]
+
+function gerarCodigoPix(total) {
+  const valor = Number(total || 0).toFixed(2)
+  return `00020126580014BR.GOV.BCB.PIX0136foodexpress-pix-demo520400005303986540${valor.length}${valor}5802BR5911FoodExpress6009Sao Paulo62170513FOODEXPRESS6304A1B2`
+}
+
+function gerarLinhaBoleto(total) {
+  const centavos = String(Math.round(Number(total || 0) * 100)).padStart(10, '0')
+  return `34191.79001 01043.510047 91020.150008 8 ${centavos}`
+}
+
+function QrPixVisual({ codigo, imagem }) {
+  const pontos = useMemo(() => {
+    const tamanho = 17
+    return Array.from({ length: tamanho * tamanho }, (_, index) => {
+      const x = index % tamanho
+      const y = Math.floor(index / tamanho)
+      const marcador =
+        (x < 5 && y < 5) ||
+        (x > 11 && y < 5) ||
+        (x < 5 && y > 11)
+      if (marcador) return x === 0 || y === 0 || x === 4 || y === 4 || (x === 2 && y === 2)
+      const charCode = codigo.charCodeAt((index * 7) % codigo.length)
+      return (charCode + x * 3 + y * 5 + index) % 4 !== 0
+    })
+  }, [codigo])
+
+  return imagem ? (
+    <img
+      src={imagem}
+      alt="QR Code Pix"
+      className="w-[142px] h-[142px] rounded-xl border border-border bg-white p-2 object-contain shadow-sm"
+    />
+  ) : (
+    <div className="grid grid-cols-[repeat(17,6px)] gap-1 rounded-xl border border-border bg-white p-3 shadow-sm">
+      {pontos.map((ativo, index) => (
+        <span key={index} className={`w-1.5 h-1.5 rounded-[2px] ${ativo ? 'bg-text-primary' : 'bg-transparent'}`} />
+      ))}
+    </div>
+  )
+}
 
 function TelaPedidoConfirmado({ numero, onVoltar }) {
   const etapas = [
@@ -80,6 +121,7 @@ export default function Checkout() {
   const [carregando, setCarregando] = useState(false)
   const [pedidoConfirmado, setPedidoConfirmado] = useState(null)
   const [erro, setErro] = useState('')
+  const [codigoCopiado, setCodigoCopiado] = useState('')
 
   useEffect(() => {
     api.clientes.meuPerfil()
@@ -121,6 +163,10 @@ export default function Checkout() {
     return Number.isFinite(fixo) ? fixo : 0
   })() : 0
   const total = Math.max(0, totalCarrinho + taxaEntrega - desconto)
+  const valorTotalFormatado = `R$ ${total.toFixed(2).replace('.', ',')}`
+  const imagemQrPix = import.meta.env.VITE_PIX_QR_CODE_URL || ''
+  const codigoPix = useMemo(() => gerarCodigoPix(total), [total])
+  const linhaBoleto = useMemo(() => gerarLinhaBoleto(total), [total])
   const cupomDescricao = cupomAplicado
     ? cupomFreteGratis
       ? 'Frete grátis aplicado'
@@ -128,6 +174,16 @@ export default function Checkout() {
         ? `Desconto de R$ ${desconto.toFixed(2).replace('.', ',')}`
         : `${Number(cupomAplicado.desconto_percentual ?? cupomAplicado.desconto ?? 0)}% de desconto — economizando R$ ${desconto.toFixed(2).replace('.', ',')}`
     : ''
+
+  const copiarCodigoPagamento = async (tipo, codigo) => {
+    try {
+      await navigator.clipboard.writeText(codigo)
+      setCodigoCopiado(tipo)
+      setTimeout(() => setCodigoCopiado(''), 1800)
+    } catch {
+      setCodigoCopiado('')
+    }
+  }
 
   const enderecoFinal = enderecoCustom.trim() || enderecoPrincipal || (localizacao ? 'Minha localização atual' : 'Endereço não informado')
 
@@ -345,6 +401,11 @@ export default function Checkout() {
                 }`}>
                   {pagamentoSelecionado === fp.id && <div className="w-2.5 h-2.5 bg-primary rounded-full" />}
                 </div>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                  pagamentoSelecionado === fp.id ? 'bg-white text-primary' : 'bg-surface-2 text-text-muted'
+                }`}>
+                  <fp.Icon size={18} />
+                </div>
                 <div>
                   <p className="text-sm font-bold text-text-primary">{fp.label}</p>
                   <p className="text-xs text-text-muted font-semibold">{fp.descricao}</p>
@@ -352,11 +413,97 @@ export default function Checkout() {
               </button>
             ))}
             <AnimatePresence>
+              {pagamentoSelecionado === 'pix' && (
+                <Motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="px-3 pb-3 overflow-hidden"
+                >
+                  <div className="mt-2 rounded-2xl border border-primary/20 bg-primary-light p-4 flex flex-col sm:flex-row gap-4 sm:items-center">
+                    <QrPixVisual codigo={codigoPix} imagem={imagemQrPix} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-extrabold text-text-primary">Pix copia e cola</p>
+                      <p className="text-xs text-text-muted font-semibold mt-1">Pague {valorTotalFormatado} pelo QR Code. O restaurante recebe a confirmação junto com o pedido.</p>
+                      <div className="mt-3 flex items-center gap-2">
+                        <code className="flex-1 min-w-0 truncate rounded-xl bg-white border border-border px-3 py-2 text-xs font-bold text-text-secondary">
+                          {codigoPix}
+                        </code>
+                        <button
+                          type="button"
+                          onClick={() => copiarCodigoPagamento('pix', codigoPix)}
+                          className="w-10 h-10 rounded-xl bg-primary text-white border-none flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-all"
+                          title="Copiar código Pix"
+                        >
+                          {codigoCopiado === 'pix' ? <CheckCircle size={17} /> : <Copy size={17} />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </Motion.div>
+              )}
+              {pagamentoSelecionado === 'cartao' && (
+                <Motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="px-3 pb-3 overflow-hidden"
+                >
+                  <div className="mt-2 rounded-2xl border border-border bg-surface-2 p-4 flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white text-primary flex items-center justify-center shrink-0">
+                      <Bike size={19} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-extrabold text-text-primary">Pagamento na entrega</p>
+                      <p className="text-xs text-text-muted font-semibold mt-1">
+                        O entregador leva a maquininha para você pagar {valorTotalFormatado} no crédito ou débito quando receber o pedido.
+                      </p>
+                      <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white border border-border px-3 py-1.5 text-xs font-bold text-text-secondary">
+                        <ShieldCheck size={14} className="text-accent" />
+                        Nenhum dado de cartão fica salvo no app
+                      </div>
+                    </div>
+                  </div>
+                </Motion.div>
+              )}
               {pagamentoSelecionado === 'dinheiro' && (
                 <Motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="px-3 pb-3 overflow-hidden">
                   <label className="block text-xs font-bold text-text-muted mb-1.5 mt-2">Troco para quanto? (opcional)</label>
                   <input type="text" placeholder="Ex: R$ 100,00" value={troco} onChange={e => setTroco(e.target.value)}
                     className="w-full px-4 py-2.5 border border-border rounded-xl text-sm font-semibold text-text-primary outline-none focus:border-primary transition-all" />
+                </Motion.div>
+              )}
+              {pagamentoSelecionado === 'boleto' && (
+                <Motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="px-3 pb-3 overflow-hidden"
+                >
+                  <div className="mt-2 rounded-2xl border border-border bg-surface-2 p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-white text-primary flex items-center justify-center shrink-0">
+                        <ReceiptText size={19} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-extrabold text-text-primary">Boleto do pedido</p>
+                        <p className="text-xs text-text-muted font-semibold mt-1">Use a linha digitável para pagar {valorTotalFormatado}. A confirmação pode levar até 1 dia útil.</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 flex items-center gap-2">
+                      <code className="flex-1 min-w-0 truncate rounded-xl bg-white border border-border px-3 py-2 text-xs font-bold text-text-secondary">
+                        {linhaBoleto}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={() => copiarCodigoPagamento('boleto', linhaBoleto)}
+                        className="w-10 h-10 rounded-xl bg-primary text-white border-none flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-all"
+                        title="Copiar linha digitável"
+                      >
+                        {codigoCopiado === 'boleto' ? <CheckCircle size={17} /> : <Copy size={17} />}
+                      </button>
+                    </div>
+                  </div>
                 </Motion.div>
               )}
             </AnimatePresence>

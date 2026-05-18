@@ -42,7 +42,7 @@ const secoes = [
   {
     icone: Mail,
     titulo: '8. Contato e DPO',
-    texto: `Para exercer seus direitos ou esclarecer dúvidas sobre o tratamento dos seus dados, entre em contato com nosso Encarregado de Proteção de Dados (DPO): privacidade@foodexpress.com.br. Responderemos em até 15 dias úteis. Para reclamações não resolvidas, você pode acionar a Autoridade Nacional de Proteção de Dados (ANPD) em gov.br/anpd.`,
+    texto: `Para exercer seus direitos ou esclarecer dúvidas sobre o tratamento dos seus dados, entre em contato com nosso Encarregado de Proteção de Dados (DPO): vdasilvasouza77@gmail.com. Responderemos em até 15 dias úteis. Para reclamações não resolvidas, você pode acionar a Autoridade Nacional de Proteção de Dados (ANPD) em gov.br/anpd.`,
   },
 ]
 
@@ -116,8 +116,8 @@ export default function PoliticaPrivacidade() {
         >
           <p className="text-xs text-text-muted mb-4">
             DPO:{' '}
-            <a href="mailto:privacidade@foodexpress.com.br" className="text-primary font-bold hover:underline">
-              privacidade@foodexpress.com.br
+            <a href="mailto:vdasilvasouza77@gmail.com" className="text-primary font-bold hover:underline">
+              vdasilvasouza77@gmail.com
             </a>
           </p>
           <Link

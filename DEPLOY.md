@@ -33,7 +33,7 @@ TURSO_DATABASE_URL=libsql://your-database.turso.io
 TURSO_AUTH_TOKEN=replace_with_rotated_turso_token
 JWT_SECRET=replace_with_long_random_secret
 RESEND_API_KEY=replace_with_rotated_resend_key
-FROM_EMAIL=FoodExpress <no-reply@your-verified-domain.com>
+FROM_EMAIL=FoodExpress <vdasilvasouza77@gmail.com>
 STRIPE_SECRET_KEY=sk_live_or_test_key
 STRIPE_WEBHOOK_SECRET=whsec_replace_me
 ```

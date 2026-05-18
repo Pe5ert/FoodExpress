@@ -108,8 +108,8 @@ export default function TermosUso() {
         >
           <p className="text-xs text-text-muted mb-4">
             Dúvidas? Entre em contato:{' '}
-            <a href="mailto:juridico@foodexpress.com.br" className="text-primary font-bold hover:underline">
-              juridico@foodexpress.com.br
+            <a href="mailto:vdasilvasouza77@gmail.com" className="text-primary font-bold hover:underline">
+              vdasilvasouza77@gmail.com
             </a>
           </p>
           <Link

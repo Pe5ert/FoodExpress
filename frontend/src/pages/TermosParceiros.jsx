@@ -134,8 +134,8 @@ export default function TermosParceiros() {
         >
           <p className="text-xs text-text-muted mb-4">
             Dúvidas comerciais:{' '}
-            <a href="mailto:parceiros@foodexpress.com.br" className="text-secondary font-bold hover:underline">
-              parceiros@foodexpress.com.br
+            <a href="mailto:vdasilvasouza77@gmail.com" className="text-secondary font-bold hover:underline">
+              vdasilvasouza77@gmail.com
             </a>
           </p>
           <Link

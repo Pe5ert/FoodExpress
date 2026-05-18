@@ -11,8 +11,8 @@ const redesSociais = [
 ]
 
 const contatos = [
-  { Icone: Mail,   texto: 'suporte@foodexpress.com.br' },
-  { Icone: Phone,  texto: '(85) 3000-0000'             },
+  { Icone: Mail,   texto: 'vdasilvasouza77@gmail.com' },
+  { Icone: Phone,  texto: '+55 85 9775-4219'           },
   { Icone: MapPin, texto: 'Fortaleza, CE'               },
 ]
 
