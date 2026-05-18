@@ -179,6 +179,14 @@ export default function PerfilCliente() {
   const [carregando, setCarregando] = useState(true)
   const [clienteId, setClienteId] = useState(null)
   const [favoritos, setFavoritos] = useState([])
+  const [pedidoParaAvaliar, setPedidoParaAvaliar] = useState(null)
+  const [avaliacoesDispensadas, setAvaliacoesDispensadas] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('avaliacoesDispensadas') || '{}')
+    } catch {
+      return {}
+    }
+  })
 
   useEffect(() => {
     const nomeInicial = formatarNome(usuario?.nome || 'Usuário')
@@ -268,6 +276,23 @@ export default function PerfilCliente() {
     }
   }, [usuario?.id])
 
+  useEffect(() => {
+    const pendente = pedidos.find((pedido) => {
+      const entregue = String(pedido.status || '').toLowerCase() === 'entregue'
+      const restauranteAvaliado = Boolean(pedido.avaliacao_restaurante || pedido.avaliacao)
+      return entregue && !restauranteAvaliado && !avaliacoesDispensadas[pedido.id]
+    })
+
+    setPedidoParaAvaliar(pendente || null)
+  }, [pedidos, avaliacoesDispensadas])
+
+  const dispensarAvaliacao = (pedidoId) => {
+    const proximas = { ...avaliacoesDispensadas, [pedidoId]: true }
+    setAvaliacoesDispensadas(proximas)
+    sessionStorage.setItem('avaliacoesDispensadas', JSON.stringify(proximas))
+    setPedidoParaAvaliar(null)
+  }
+
   const pedidosFormatados = pedidos.map((pedido) => {
     let itensTexto = 'Itens do pedido'
     try {
@@ -296,6 +321,52 @@ export default function PerfilCliente() {
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
       <Header />
+
+      {pedidoParaAvaliar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
+          <Motion.div
+            className="w-full max-w-md rounded-2xl bg-white border border-border shadow-xl p-6"
+            initial={{ opacity: 0, scale: 0.94, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+          >
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center shrink-0">
+                <Star size={24} className="text-accent" fill="#FFBA08" stroke="#FFBA08" />
+              </div>
+              <button
+                type="button"
+                onClick={() => dispensarAvaliacao(pedidoParaAvaliar.id)}
+                className="w-9 h-9 rounded-full border border-border bg-white flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
+                aria-label="Fechar avaliação"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <h2 className="font-display text-xl font-extrabold text-text-primary mb-2">Pedido entregue!</h2>
+            <p className="text-sm text-text-secondary font-semibold mb-5">
+              Avalie sua experiência com {pedidoParaAvaliar.restaurante_nome || 'o restaurante'} e a entrega.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                type="button"
+                onClick={() => navigate(`/pedido/${pedidoParaAvaliar.id}`)}
+                className="flex-1 rounded-full bg-primary text-white px-5 py-2.5 text-sm font-bold hover:bg-primary/90 transition-colors border-none cursor-pointer"
+              >
+                Avaliar agora
+              </button>
+              <button
+                type="button"
+                onClick={() => dispensarAvaliacao(pedidoParaAvaliar.id)}
+                className="flex-1 rounded-full border border-border bg-white px-5 py-2.5 text-sm font-bold text-text-secondary hover:bg-surface-2 transition-colors cursor-pointer"
+              >
+                Agora não
+              </button>
+            </div>
+          </Motion.div>
+        </div>
+      )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-12 pb-6">
         <div className="flex flex-col lg:flex-row gap-6 items-start">

@@ -282,8 +282,8 @@ export default function DetalhesPedido() {
             <p className="text-sm text-text-muted font-semibold mb-3">Quantas estrelas você dá?</p>
             <div className="flex gap-2 mb-5">
               {[1, 2, 3, 4, 5].map(s => (
-                <button key={s} onClick={() => setEstrelas(s)}
-                  className={`text-3xl transition-transform hover:scale-110 ${s <= estrelas ? 'text-accent' : 'text-border'}`}>
+                <button key={s} type="button" onClick={() => setEstrelas(s)}
+                  className={`text-3xl transition-transform hover:scale-110 bg-transparent border-none cursor-pointer ${s <= estrelas ? 'text-accent' : 'text-border'}`}>
                   ★
                 </button>
               ))}
@@ -324,23 +324,39 @@ export default function DetalhesPedido() {
             </p>
             <div className="flex gap-2">
               {[1, 2, 3, 4, 5].map(s => (
-                <button key={s} onClick={() => avaliarEntregador(s)}
+                <button key={s} type="button" onClick={() => avaliarEntregador(s)}
                   className="text-3xl text-accent transition-transform hover:scale-110 bg-transparent border-none cursor-pointer">
                   ★
                 </button>
               ))}
             </div>
+            {erroAvaliacao && avaliacaoEnviada && (
+              <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-600">
+                {erroAvaliacao}
+              </p>
+            )}
           </Motion.div>
         )}
 
         {avaliacaoEnviada && (
           <Motion.div
-            className="bg-accent/10 border border-accent/20 rounded-2xl p-6 text-center"
+            className="bg-accent/10 border border-accent/20 rounded-2xl p-6 text-center mt-4"
             initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
           >
             <CheckCircle size={32} className="text-accent mx-auto mb-3" />
-            <p className="font-display font-extrabold text-text-primary">Avaliação enviada!</p>
+            <p className="font-display font-extrabold text-text-primary">Restaurante avaliado!</p>
             <p className="text-sm text-text-muted font-semibold mt-1">Obrigado pelo seu feedback.</p>
+          </Motion.div>
+        )}
+
+        {avaliacaoEntregadorEnviada && (
+          <Motion.div
+            className="bg-secondary/10 border border-secondary/20 rounded-2xl p-6 text-center mt-4"
+            initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+          >
+            <CheckCircle size={32} className="text-secondary mx-auto mb-3" />
+            <p className="font-display font-extrabold text-text-primary">Entrega avaliada!</p>
+            <p className="text-sm text-text-muted font-semibold mt-1">Valeu por ajudar a melhorar as entregas.</p>
           </Motion.div>
         )}
 

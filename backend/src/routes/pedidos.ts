@@ -265,12 +265,24 @@ router.get('/:id/rastrear', async (req, res: Response) => {
     })
     if (!result.rows.length) return res.status(404).json({ erro: 'Pedido não encontrado' }) as any
     const p = result.rows[0] as any
-    if (!p.entregador_id) return res.json({ pedido_id: p.id, status: p.status, mensagem: 'Aguardando entregador' }) as any
+    if (!p.entregador_id) {
+      return res.json({
+        pedido_id: p.id,
+        status: p.status,
+        mensagem: 'Aguardando entregador',
+        avaliacao_restaurante: p.avaliacao_restaurante,
+        avaliacao_entregador: p.avaliacao_entregador,
+        restaurante: { id: p.restaurante_id, nome: p.restaurante_nome }
+      }) as any
+    }
 
     const dist = calcularDistancia(Number(p.entregador_lat), Number(p.entregador_lng), Number(p.latitude_entrega), Number(p.longitude_entrega))
     res.json({
-      pedido_id: p.id, status: p.status,
-      restaurante: { nome: p.restaurante_nome, localizacao: { lat: p.rest_lat, lng: p.rest_lng } },
+      pedido_id: p.id,
+      status: p.status,
+      avaliacao_restaurante: p.avaliacao_restaurante,
+      avaliacao_entregador: p.avaliacao_entregador,
+      restaurante: { id: p.restaurante_id, nome: p.restaurante_nome, localizacao: { lat: p.rest_lat, lng: p.rest_lng } },
       entregador: { id: p.entregador_id, nome: p.entregador_nome, telefone: p.entregador_telefone, localizacao_atual: { lat: p.entregador_lat, lng: p.entregador_lng } },
       destino: { endereco: p.endereco_entrega, localizacao: { lat: p.latitude_entrega, lng: p.longitude_entrega } },
       rota: {

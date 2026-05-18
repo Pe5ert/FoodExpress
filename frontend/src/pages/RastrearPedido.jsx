@@ -6,7 +6,7 @@ import api from '../services/api'
 import MobileNavBar from '../components/MobileNavBar'
 import {
   ArrowLeft, MapPin, Clock, Truck, Phone,
-  AlertCircle, UtensilsCrossed, Navigation
+  AlertCircle, UtensilsCrossed, Navigation, Star, X
 } from 'lucide-react'
 
 
@@ -96,6 +96,7 @@ export default function RastrearPedido() {
   const [d, setD] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [tempoAtualizado, setTempoAtualizado] = useState(0)
+  const [conviteAvaliacaoFechado, setConviteAvaliacaoFechado] = useState(false)
 
   const buscar = () => {
     api.pedidos.rastrear(id)
@@ -125,6 +126,9 @@ export default function RastrearPedido() {
   }, [])
 
   const abrirSuporte = () => navigate(`/suporte?pedido=${encodeURIComponent(id)}&categoria=pedido`)
+  const deveMostrarConviteAvaliacao = String(d?.status || '').toLowerCase() === 'entregue'
+    && !d?.avaliacao_restaurante
+    && !conviteAvaliacaoFechado
   const ligarEntregador = () => {
     const telefone = d?.entregador?.telefone || d?.entregador?.telefone_entregador
     if (telefone) {
@@ -168,6 +172,50 @@ export default function RastrearPedido() {
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
       <Header />
+
+      {deveMostrarConviteAvaliacao && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4">
+          <Motion.div
+            className="w-full max-w-md rounded-2xl bg-white border border-border shadow-xl p-6"
+            initial={{ opacity: 0, scale: 0.94, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+          >
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center shrink-0">
+                <Star size={24} className="text-accent" fill="#FFBA08" stroke="#FFBA08" />
+              </div>
+              <button
+                type="button"
+                onClick={() => setConviteAvaliacaoFechado(true)}
+                className="w-9 h-9 rounded-full border border-border bg-white flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors"
+                aria-label="Fechar avaliação"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <h2 className="font-display text-xl font-extrabold text-text-primary mb-2">Pedido entregue!</h2>
+            <p className="text-sm text-text-secondary font-semibold mb-5">
+              Avalie sua experiência com {d?.restaurante?.nome || 'o restaurante'} e a entrega.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                type="button"
+                onClick={() => navigate(`/pedido/${d.pedido_id}`)}
+                className="flex-1 rounded-full bg-primary text-white px-5 py-2.5 text-sm font-bold hover:bg-primary/90 transition-colors border-none cursor-pointer"
+              >
+                Avaliar agora
+              </button>
+              <button
+                type="button"
+                onClick={() => setConviteAvaliacaoFechado(true)}
+                className="flex-1 rounded-full border border-border bg-white px-5 py-2.5 text-sm font-bold text-text-secondary hover:bg-surface-2 transition-colors cursor-pointer"
+              >
+                Agora não
+              </button>
+            </div>
+          </Motion.div>
+        </div>
+      )}
 
       <main className="max-w-5xl mx-auto px-4 py-8">
         {/* Voltar */}
