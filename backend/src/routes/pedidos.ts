@@ -40,7 +40,13 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
       restauranteId = restaurante.id
     }
 
-    let sql = `SELECT p.*, r.nome as restaurante_nome, c.nome as cliente_nome
+    let sql = `SELECT p.*,
+                      r.nome as restaurante_nome,
+                      r.endereco as restaurante_endereco,
+                      r.latitude as restaurante_latitude,
+                      r.longitude as restaurante_longitude,
+                      c.nome as cliente_nome,
+                      c.telefone as cliente_telefone
                FROM pedidos p
                LEFT JOIN restaurantes r ON r.id = p.restaurante_id
                LEFT JOIN clientes c ON c.id = p.cliente_id
@@ -67,7 +73,8 @@ router.get('/disponiveis', requireAuth, async (req: AuthRequest, res: Response) 
     const result = await db.execute({
       sql: `SELECT p.*, r.nome as restaurante_nome, r.endereco as restaurante_endereco,
                    r.latitude as restaurante_latitude, r.longitude as restaurante_longitude,
-                   c.nome as cliente_nome
+                   c.nome as cliente_nome,
+                   c.telefone as cliente_telefone
             FROM pedidos p
             LEFT JOIN restaurantes r ON r.id = p.restaurante_id
             LEFT JOIN clientes c ON c.id = p.cliente_id
@@ -182,10 +189,30 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     const { status, tempo_preparo_estimado } = req.body
     const sets: string[] = ['updated_at = current_timestamp']
     const args: any[] = []
-    if (status) { sets.push('status = ?'); args.push(status) }
+    if (status) {
+      sets.push('status = ?'); args.push(status)
+      if (status === 'confirmado') sets.push('confirmado_em = COALESCE(confirmado_em, CURRENT_TIMESTAMP)')
+      if (status === 'pronto') sets.push('pronto_em = COALESCE(pronto_em, CURRENT_TIMESTAMP)')
+      if (status === 'entregue') sets.push('entregue_em = COALESCE(entregue_em, CURRENT_TIMESTAMP)')
+      if (status === 'cancelado') sets.push('cancelado_em = COALESCE(cancelado_em, CURRENT_TIMESTAMP)')
+    }
     if (tempo_preparo_estimado !== undefined) { sets.push('tempo_preparo_estimado = ?'); args.push(tempo_preparo_estimado) }
     args.push(req.params.id)
     await db.execute({ sql: `UPDATE pedidos SET ${sets.join(', ')} WHERE id = ?`, args })
+    if (status === 'entregue') {
+      const pedido = await db.execute({ sql: 'SELECT entregador_id FROM pedidos WHERE id = ?', args: [req.params.id] })
+      const entregadorId = (pedido.rows[0] as any)?.entregador_id
+      if (entregadorId) {
+        await db.execute({
+          sql: `UPDATE entregadores
+                SET total_entregas = COALESCE(total_entregas, 0) + 1,
+                    status = 'disponivel',
+                    ultima_atualizacao = CURRENT_TIMESTAMP
+                WHERE id = ?`,
+          args: [entregadorId]
+        })
+      }
+    }
     res.json({ mensagem: 'Pedido atualizado com sucesso' })
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao atualizar pedido' })
@@ -212,8 +239,8 @@ router.get('/:id/rastrear', async (req, res: Response) => {
     const result = await db.execute({
       sql: `SELECT p.*,
               r.nome as restaurante_nome, r.latitude as rest_lat, r.longitude as rest_lng,
-              e.nome as entregador_nome, e.latitude as entregador_lat, e.longitude as entregador_lng,
-              c.nome as cliente_nome
+              e.nome as entregador_nome, e.telefone as entregador_telefone, e.latitude as entregador_lat, e.longitude as entregador_lng,
+              c.nome as cliente_nome, c.telefone as cliente_telefone
             FROM pedidos p
             LEFT JOIN restaurantes r ON p.restaurante_id = r.id
             LEFT JOIN entregadores e ON p.entregador_id = e.id
@@ -229,7 +256,7 @@ router.get('/:id/rastrear', async (req, res: Response) => {
     res.json({
       pedido_id: p.id, status: p.status,
       restaurante: { nome: p.restaurante_nome, localizacao: { lat: p.rest_lat, lng: p.rest_lng } },
-      entregador: { id: p.entregador_id, nome: p.entregador_nome, localizacao_atual: { lat: p.entregador_lat, lng: p.entregador_lng } },
+      entregador: { id: p.entregador_id, nome: p.entregador_nome, telefone: p.entregador_telefone, localizacao_atual: { lat: p.entregador_lat, lng: p.entregador_lng } },
       destino: { endereco: p.endereco_entrega, localizacao: { lat: p.latitude_entrega, lng: p.longitude_entrega } },
       rota: {
         distancia_atual_km: Math.round(dist * 100) / 100,

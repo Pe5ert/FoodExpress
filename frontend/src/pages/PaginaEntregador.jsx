@@ -14,19 +14,90 @@ import { formatarHoraBanco, parseDataBanco, mesmoDiaLocal } from '../utils/datas
 // aqui e o back gelado - dados de entregador devem vir do backend
 // dados carregados do backend no componente principal
 
+function valorTexto(valor, fallback = '') {
+  return String(valor ?? '').trim() || fallback
+}
+
+function iniciais(nome) {
+  const partes = String(nome || 'Cliente').trim().split(/\s+/).filter(Boolean)
+  return (partes[0]?.[0] || 'C').toUpperCase() + (partes[1]?.[0] || '').toUpperCase()
+}
+
+function normalizarTelefone(telefone) {
+  const digitos = String(telefone || '').replace(/\D/g, '')
+  if (!digitos) return ''
+  if (digitos.startsWith('55')) return `+${digitos}`
+  return `+55${digitos}`
+}
+
+function formatarItensPedido(itens) {
+  let lista = itens
+  if (typeof lista === 'string') {
+    try { lista = JSON.parse(lista) } catch { return lista || 'Itens do pedido' }
+  }
+  if (!Array.isArray(lista) || !lista.length) return 'Itens do pedido'
+  return lista.map((item) => {
+    const nome = item?.nome || item?.name || item?.titulo || item?.id || 'Item'
+    const quantidade = Number(item?.quantidade || item?.qtd || 1)
+    return `${quantidade > 1 ? `${quantidade}x ` : ''}${nome}`
+  }).join(', ')
+}
+
+function numeroPedido(id, tamanho = 6) {
+  return `#${String(id || '').replace(/^ped_/, '').slice(-tamanho).toUpperCase()}`
+}
+
+function normalizarEntregaAtiva(p) {
+  const clienteNome = valorTexto(p.cliente_nome || p.cliente_id, 'Cliente')
+  return {
+    id: numeroPedido(p.id, 4),
+    cliente: {
+      nome: clienteNome,
+      telefone: p.cliente_telefone || '',
+      avatar: iniciais(clienteNome),
+    },
+    loja: {
+      nome: valorTexto(p.restaurante_nome || p.restaurante_id, 'Restaurante'),
+      emoji: '🍽️',
+      endereco: valorTexto(p.restaurante_endereco, 'Endereço da loja não informado'),
+      latitude: Number(p.restaurante_latitude || 0),
+      longitude: Number(p.restaurante_longitude || 0),
+    },
+    destino: {
+      rua: valorTexto(p.endereco_entrega, 'Endereço não informado'),
+      bairro: '',
+      cidade: '',
+      latitude: Number(p.latitude_entrega || 0),
+      longitude: Number(p.longitude_entrega || 0),
+    },
+    itens: formatarItensPedido(p.itens),
+    valor: p.total,
+    distancia: p.distancia_km ? `${Number(p.distancia_km).toFixed(1)} km` : '--',
+    tempoEstimado: p.tempo_entrega_estimado ? `${p.tempo_entrega_estimado} min` : '--',
+    etapa: 'coletando',
+    _id: p.id,
+  }
+}
+
 // ── Mini mapa SVG ─────────────────────────────────────────────────────────────
 function MiniMapa({ etapa, localizacao, entrega }) {
   const entregadorX = etapa === 'coletando' ? 60 : 200
 
   const abrirMaps = () => {
-    const destino = entrega?.destino?.rua || ''
-    if (localizacao && destino) {
-      const url = `https://www.google.com/maps/dir/?api=1&origin=${localizacao.latitude},${localizacao.longitude}&destination=${encodeURIComponent(destino)}&travelmode=driving`
-      window.open(url, '_blank')
-    } else if (localizacao) {
-      const url = `https://www.google.com/maps/@${localizacao.latitude},${localizacao.longitude},16z`
-      window.open(url, '_blank')
-    }
+    const destinoAtual = etapa === 'coletando' ? entrega?.loja : entrega?.destino
+    const destinoCoords = destinoAtual?.latitude && destinoAtual?.longitude
+      ? `${destinoAtual.latitude},${destinoAtual.longitude}`
+      : ''
+    const destinoTexto = destinoCoords || destinoAtual?.rua || destinoAtual?.endereco || entrega?.destino?.rua || ''
+    const origem = localizacao?.latitude && localizacao?.longitude
+      ? `${localizacao.latitude},${localizacao.longitude}`
+      : ''
+    const url = destinoTexto
+      ? `https://www.google.com/maps/dir/?api=1${origem ? `&origin=${origem}` : ''}&destination=${encodeURIComponent(destinoTexto)}&travelmode=driving`
+      : origem
+        ? `https://www.google.com/maps/@${origem},16z`
+        : 'https://www.google.com/maps'
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   return (
@@ -83,6 +154,7 @@ function MiniMapa({ etapa, localizacao, entrega }) {
 // ── Card entrega ativa ────────────────────────────────────────────────────────
 function EntregaAtiva({ entrega, onAvançar, localizacao }) {
   const naLoja = entrega.etapa === 'coletando'
+  const telefoneCliente = normalizarTelefone(entrega.cliente.telefone)
 
   return (
     <Motion.div
@@ -166,8 +238,16 @@ function EntregaAtiva({ entrega, onAvançar, localizacao }) {
               <p className="text-xs text-text-muted font-medium">{entrega.itens}</p>
             </div>
           </div>
-          <a href={`tel:${entrega.cliente.telefone}`}
-            className="w-9 h-9 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center text-accent hover:bg-accent hover:text-white transition-all">
+          <a
+            href={telefoneCliente ? `tel:${telefoneCliente}` : undefined}
+            onClick={(event) => { if (!telefoneCliente) event.preventDefault() }}
+            title={telefoneCliente ? `Ligar para ${entrega.cliente.nome}` : 'Telefone não informado'}
+            className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all ${
+              telefoneCliente
+                ? 'bg-accent/10 border-accent/20 text-accent hover:bg-accent hover:text-white'
+                : 'bg-surface-2 border-border text-text-muted cursor-not-allowed opacity-60'
+            }`}
+          >
             <Phone size={15} />
           </a>
         </div>
@@ -231,14 +311,28 @@ function FilaPedidos({ fila = [], onAceitar }) {
 
 // ── Histórico ─────────────────────────────────────────────────────────────────
 function Historico({ historico = [] }) {
+  const [mostrarTodas, setMostrarTodas] = useState(false)
+  const entregasVisiveis = mostrarTodas ? historico : historico.slice(0, 5)
+
   return (
     <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-        <h3 className="font-display text-base font-bold text-text-primary">Entregas de hoje</h3>
-        <button className="text-xs font-bold text-primary hover:underline bg-transparent border-none cursor-pointer">Ver todas</button>
+        <h3 className="font-display text-base font-bold text-text-primary">Últimas entregas</h3>
+        {historico.length > 5 && (
+          <button
+            type="button"
+            onClick={() => setMostrarTodas(v => !v)}
+            className="text-xs font-bold text-primary hover:underline bg-transparent border-none cursor-pointer"
+          >
+            {mostrarTodas ? 'Ver menos' : 'Ver todas'}
+          </button>
+        )}
       </div>
       <div className="divide-y divide-border">
-        {historico.map((h, i) => (
+        {entregasVisiveis.length === 0 && (
+          <div className="px-5 py-6 text-sm text-text-muted font-semibold">Nenhuma entrega concluída hoje.</div>
+        )}
+        {entregasVisiveis.map((h, i) => (
           <Motion.div key={h.id}
             className="flex items-center gap-3 px-5 py-3.5 hover:bg-surface-2 transition-colors"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -259,9 +353,13 @@ function Historico({ historico = [] }) {
             <div className="text-right shrink-0">
               <p className="font-display text-sm font-extrabold text-accent">R$ {h.valor.toFixed(2).replace('.', ',')}</p>
               <div className="flex items-center justify-end gap-0.5 mt-0.5">
-                {Array.from({ length: 5 }).map((_, j) => (
-                  <Star key={j} size={9} fill={j < h.avaliacao ? '#FFBA08' : 'none'} stroke={j < h.avaliacao ? '#FFBA08' : '#ccc'} />
-                ))}
+                {h.avaliacao ? (
+                  Array.from({ length: 5 }).map((_, j) => (
+                    <Star key={j} size={9} fill={j < h.avaliacao ? '#FFBA08' : 'none'} stroke={j < h.avaliacao ? '#FFBA08' : '#ccc'} />
+                  ))
+                ) : (
+                  <span className="text-[10px] font-semibold text-text-muted">Sem avaliação</span>
+                )}
               </div>
             </div>
           </Motion.div>
@@ -348,6 +446,7 @@ export default function PaginaEntregador() {
   const [totalSemana, setTotalSemana] = useState(0)
   const [tendenciaSemana, setTendenciaSemana] = useState(null)
   const [entregadorId, setEntregadorId] = useState(null)
+  const [avaliacaoEntregador, setAvaliacaoEntregador] = useState(0)
 
   useEffect(() => {
     // Busca ou cria dados do entregador logado
@@ -372,6 +471,7 @@ export default function PaginaEntregador() {
       }
       if (!ent?.id) return
       setEntregadorId(ent.id)
+      setAvaliacaoEntregador(Number(ent.avaliacao_media || 0))
       if (ent.latitude !== undefined && ent.longitude !== undefined && Number(ent.latitude) !== 0 && Number(ent.longitude) !== 0) {
         setLocalizacao({ latitude: Number(ent.latitude), longitude: Number(ent.longitude) })
       }
@@ -381,18 +481,7 @@ export default function PaginaEntregador() {
         const pedidosAtivos = await api.pedidos.listar({ entregadorId: ent.id, status: 'entregando' })
         if (pedidosAtivos.length > 0) {
           const p = pedidosAtivos[0]
-          setEntregaAtiva({
-            id: `#${String(p.id).slice(-4)}`,
-            cliente: { nome: p.cliente_nome || p.cliente_id || 'Cliente', telefone: '', avatar: 'CL' },
-            loja: { nome: p.restaurante_nome || p.restaurante_id || 'Restaurante', emoji: '🍽️', endereco: '' },
-            destino: { rua: p.endereco_entrega, bairro: '', cidade: '' },
-            itens: typeof p.itens === 'string' ? p.itens : JSON.stringify(p.itens),
-            valor: p.total,
-            distancia: p.distancia_km ? `${p.distancia_km} km` : '--',
-            tempoEstimado: p.tempo_entrega_estimado ? `${p.tempo_entrega_estimado} min` : '--',
-            etapa: 'coletando',
-            _id: p.id,
-          })
+          setEntregaAtiva(normalizarEntregaAtiva(p))
         }
       } catch (e) {
         console.warn('Erro ao buscar pedidos ativos:', e)
@@ -405,13 +494,13 @@ export default function PaginaEntregador() {
     if (!entregadorId) return
     // Histórico de entregas concluídas
     api.pedidos.listar({ entregadorId, status: 'entregue' })
-      .then(lista => setHistorico(lista.slice(0, 10).map(p => ({
-        id: `#${String(p.id).slice(-4)}`,
+      .then(lista => setHistorico(lista.map(p => ({
+        id: numeroPedido(p.id, 4),
         loja: p.restaurante_nome || p.restaurante_id, emoji: '🍽️',
         cliente: p.cliente_nome || p.cliente_id,
         valor: p.total,
         tempo: p.tempo_entrega_estimado ? `${p.tempo_entrega_estimado} min` : '--',
-        avaliacao: p.avaliacao_entregador || 5,
+        avaliacao: Number(p.avaliacao_entregador || 0),
         horario: formatarHoraBanco(p.created_at),
       })))
     ).catch(() => {})
@@ -463,20 +552,20 @@ export default function PaginaEntregador() {
         setGanhosSemana(semanaFinal)
         setTotalSemana(totalAtual)
         setTendenciaSemana(totalAnterior > 0 ? Math.round(((totalAtual - totalAnterior) / totalAnterior) * 100) : null)
-        setHistorico(lista.slice(0, 10).map(p => ({
-          id: `#${String(p.id).slice(-4)}`,
+        setHistorico(lista.map(p => ({
+          id: numeroPedido(p.id, 4),
           loja: p.restaurante_nome || p.restaurante_id, emoji: '🍽️',
           cliente: p.cliente_nome || p.cliente_id,
           valor: p.total,
           tempo: p.tempo_entrega_estimado ? `${p.tempo_entrega_estimado} min` : '--',
-          avaliacao: 5,
+          avaliacao: Number(p.avaliacao_entregador || 0),
           horario: formatarHoraBanco(p.created_at),
         })))
         setStats([
           { label: 'Ganhos hoje', valor: `R$ ${ganhos.toFixed(2)}`, icon: DollarSign, cor: 'text-accent', bg: 'bg-accent/10', variacao: '' },
           { label: 'Entregas hoje', valor: String(totalEntregas), icon: Package, cor: 'text-primary', bg: 'bg-primary-light', variacao: '' },
           { label: 'Total entregas', valor: String(lista.length), icon: Bike, cor: 'text-secondary', bg: 'bg-secondary/10', variacao: 'all time' },
-          { label: 'Avaliação', valor: '5.0', icon: Star, cor: 'text-yellow-500', bg: 'bg-yellow-50', variacao: 'média' },
+          { label: 'Avaliação', valor: avaliacaoEntregador ? avaliacaoEntregador.toFixed(1) : '—', icon: Star, cor: 'text-yellow-500', bg: 'bg-yellow-50', variacao: 'média' },
         ])
       }).catch(() => {
         setGanhosSemana([
@@ -493,7 +582,7 @@ export default function PaginaEntregador() {
           { label: 'Avaliação', valor: '—', icon: Star, cor: 'text-yellow-500', bg: 'bg-yellow-50', variacao: 'média' },
         ])
       })
-  }, [entregadorId])
+  }, [entregadorId, avaliacaoEntregador])
 
 
 
@@ -505,7 +594,7 @@ export default function PaginaEntregador() {
     try {
       const lista = await api.pedidos.listarDisponiveis()
       setFila((Array.isArray(lista) ? lista : []).map(p => ({
-        id: `#${String(p.id).slice(-6)}`,
+        id: numeroPedido(p.id, 6),
         _id: p.id,
         loja: p.restaurante_nome || p.restaurante_id || 'Restaurante',
         emoji: '🍽️',
@@ -536,18 +625,7 @@ export default function PaginaEntregador() {
       const atualizados = await api.pedidos.listar({ entregadorId, status: 'entregando' })
       const p = atualizados.find(x => x.id === pedido._id) || atualizados[0]
       if (p) {
-        setEntregaAtiva({
-          id: `#${String(p.id).slice(-4)}`,
-          cliente: { nome: p.cliente_nome || p.cliente_id || 'Cliente', telefone: '', avatar: 'CL' },
-          loja: { nome: p.restaurante_nome || p.restaurante_id || 'Restaurante', emoji: '🍽️', endereco: '' },
-          destino: { rua: p.endereco_entrega, bairro: '', cidade: '' },
-          itens: typeof p.itens === 'string' ? p.itens : JSON.stringify(p.itens),
-          valor: p.total,
-          distancia: p.distancia_km ? `${p.distancia_km} km` : '--',
-          tempoEstimado: p.tempo_entrega_estimado ? `${p.tempo_entrega_estimado} min` : '--',
-          etapa: 'coletando',
-          _id: p.id,
-        })
+        setEntregaAtiva(normalizarEntregaAtiva(p))
       }
       setFila(prev => prev.filter(x => x._id !== pedido._id))
       setOnline(true)
