@@ -16,6 +16,16 @@ function calcularDistancia(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
+function deveProcessarComStripe(formaPagamento: string): boolean {
+  return ['stripe', 'cartao_online', 'credito_online', 'debito_online'].includes(
+    String(formaPagamento || '').toLowerCase()
+  )
+}
+
+function chaveStripeValida(chave?: string): boolean {
+  return /^sk_(test|live)_[A-Za-z0-9]+/.test(String(chave || '').trim())
+}
+
 // GET /api/pedidos
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
@@ -134,15 +144,19 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     let pagamento_id = null
     let clientSecret = null
 
-    if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY !== 'sk_test_xxxxx') {
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
-      const intent = await stripe.paymentIntents.create({
-        amount: Math.round(total * 100),
-        currency: 'brl',
-        description: `Pedido - ${restaurante.rows[0].nome}`
-      })
-      pagamento_id = intent.id
-      clientSecret = intent.client_secret
+    if (deveProcessarComStripe(forma_pagamento)) {
+      if (chaveStripeValida(process.env.STRIPE_SECRET_KEY)) {
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!.trim())
+        const intent = await stripe.paymentIntents.create({
+          amount: Math.round(total * 100),
+          currency: 'brl',
+          description: `Pedido - ${restaurante.rows[0].nome}`
+        })
+        pagamento_id = intent.id
+        clientSecret = intent.client_secret
+      } else {
+        console.warn('Stripe ignorado: STRIPE_SECRET_KEY ausente ou inválida para pagamento online.')
+      }
     }
 
     const pedidoId = `ped_${Date.now()}_${Math.random().toString(16).slice(2, 10)}`
