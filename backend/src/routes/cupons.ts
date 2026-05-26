@@ -91,6 +91,12 @@ router.get('/', async (req, res: Response) => {
 // POST /api/cupons — criar cupom (gerente)
 router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
+    // Validar que é gerente
+    const role = String(req.userRole || '').toLowerCase()
+    if (role !== 'gerente' && role !== 'operador') {
+      return res.status(403).json({ erro: 'Apenas gerentes podem criar cupons' })
+    }
+
     const { codigo, desconto = 0, tipo, minimo, data_expiracao } = req.body
     const tiposValidos: TipoCupom[] = ['percentual', 'fixo', 'frete_gratis']
 
@@ -107,6 +113,126 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     if (error?.message?.includes('no such table')) return res.status(500).json({ erro: 'Tabela de cupons não existe. Rode a migration/schema antes de criar cupons.' }) as any
     if (error?.message?.includes('UNIQUE')) return res.status(409).json({ erro: 'Cupom já existe' }) as any
     res.status(500).json({ erro: 'Erro ao criar cupom' })
+  }
+})
+
+// GET /api/cupons/:id — buscar cupom por ID
+router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const cupomId = req.params.id
+    const result = await db.execute({
+      sql: 'SELECT * FROM cupons WHERE id = ?',
+      args: [cupomId]
+    })
+    if (!result.rows.length) {
+      return res.status(404).json({ erro: 'Cupom não encontrado' })
+    }
+    res.json(result.rows[0])
+  } catch (error) {
+    res.status(500).json({ erro: 'Erro ao buscar cupom' })
+  }
+})
+
+// PUT /api/cupons/:id — atualizar cupom
+router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    // Validar que é gerente
+    const role = String(req.userRole || '').toLowerCase()
+    if (role !== 'gerente' && role !== 'operador') {
+      return res.status(403).json({ erro: 'Apenas gerentes podem atualizar cupons' })
+    }
+
+    const cupomId = req.params.id
+    const { codigo, desconto, tipo, minimo, data_expiracao, ativo } = req.body
+
+    const cupomAtual = await db.execute({
+      sql: 'SELECT * FROM cupons WHERE id = ?',
+      args: [cupomId]
+    })
+    if (!cupomAtual.rows.length) {
+      return res.status(404).json({ erro: 'Cupom não encontrado' })
+    }
+
+    const atualizacoes: string[] = []
+    const args: any[] = []
+
+    if (codigo) {
+      atualizacoes.push('codigo = ?')
+      args.push(String(codigo).toUpperCase())
+    }
+
+    if (desconto !== undefined && Number(desconto) >= 0) {
+      atualizacoes.push('desconto = ?')
+      args.push(Number(desconto))
+    }
+
+    if (tipo && ['percentual', 'fixo', 'frete_gratis'].includes(tipo)) {
+      atualizacoes.push('tipo = ?')
+      args.push(tipo)
+    }
+
+    if (minimo !== undefined) {
+      atualizacoes.push('minimo = ?')
+      args.push(Number(minimo))
+    }
+
+    if (data_expiracao !== undefined) {
+      atualizacoes.push('data_expiracao = ?')
+      args.push(data_expiracao || null)
+    }
+
+    if (ativo !== undefined) {
+      atualizacoes.push('ativo = ?')
+      args.push(ativo ? 1 : 0)
+    }
+
+    if (!atualizacoes.length) {
+      return res.status(400).json({ erro: 'Nenhum campo para atualizar' })
+    }
+
+    args.push(cupomId)
+    await db.execute({
+      sql: `UPDATE cupons SET ${atualizacoes.join(', ')} WHERE id = ?`,
+      args
+    })
+
+    const atualizado = await db.execute({
+      sql: 'SELECT * FROM cupons WHERE id = ?',
+      args: [cupomId]
+    })
+    res.json(atualizado.rows[0] || { mensagem: 'Cupom atualizado com sucesso' })
+  } catch (error) {
+    res.status(500).json({ erro: 'Erro ao atualizar cupom' })
+  }
+})
+
+// DELETE /api/cupons/:id — remover/desativar cupom
+router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    // Validar que é gerente
+    const role = String(req.userRole || '').toLowerCase()
+    if (role !== 'gerente' && role !== 'operador') {
+      return res.status(403).json({ erro: 'Apenas gerentes podem remover cupons' })
+    }
+
+    const cupomId = req.params.id
+    const cupomAtual = await db.execute({
+      sql: 'SELECT * FROM cupons WHERE id = ?',
+      args: [cupomId]
+    })
+    if (!cupomAtual.rows.length) {
+      return res.status(404).json({ erro: 'Cupom não encontrado' })
+    }
+
+    // Soft delete: apenas desativar
+    await db.execute({
+      sql: 'UPDATE cupons SET ativo = 0 WHERE id = ?',
+      args: [cupomId]
+    })
+
+    res.json({ mensagem: 'Cupom desativado com sucesso' })
+  } catch (error) {
+    res.status(500).json({ erro: 'Erro ao remover cupom' })
   }
 })
 

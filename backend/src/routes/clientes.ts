@@ -81,4 +81,22 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   }
 })
 
+// DELETE /api/clientes/:id — remover/desativar cliente
+router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const atual = await db.execute({ sql: 'SELECT * FROM clientes WHERE id = ?', args: [req.params.id] })
+    if (!atual.rows.length) return res.status(404).json({ erro: 'Cliente não encontrado' }) as any
+    if (!podeAcessarCliente(req, atual.rows[0])) return res.status(403).json({ erro: 'Você não pode deletar este cliente' }) as any
+
+    // Soft delete: apenas desativar o cliente
+    await db.execute({
+      sql: 'UPDATE clientes SET deletado_em = ? WHERE id = ?',
+      args: [new Date().toISOString(), req.params.id]
+    })
+    res.json({ mensagem: 'Cliente removido com sucesso' })
+  } catch (error) {
+    res.status(500).json({ erro: 'Erro ao remover cliente' })
+  }
+})
+
 export default router

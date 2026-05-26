@@ -87,4 +87,109 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   }
 })
 
+// GET /api/avaliacoes/:id
+router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const avaliacaoId = req.params.id
+    const result = await db.execute({
+      sql: 'SELECT * FROM avaliacoes WHERE id = ?',
+      args: [avaliacaoId]
+    })
+    if (!result.rows.length) {
+      return res.status(404).json({ erro: 'Avaliação não encontrada' })
+    }
+    const avaliacao = result.rows[0] as any
+    // Validar permissão: apenas o cliente que criou pode ver detalhes
+    if (String(avaliacao.cliente_id) !== String(req.userId)) {
+      return res.status(403).json({ erro: 'Você não pode acessar esta avaliação' })
+    }
+    res.json(avaliacao)
+  } catch (error) {
+    console.error('Erro ao buscar avaliação:', error)
+    res.status(500).json({ erro: 'Erro ao buscar avaliação' })
+  }
+})
+
+// PUT /api/avaliacoes/:id — atualizar avaliação
+router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const avaliacaoId = req.params.id
+    const { estrelas, comentario } = req.body
+
+    const avaliacaoAtual = await db.execute({
+      sql: 'SELECT * FROM avaliacoes WHERE id = ?',
+      args: [avaliacaoId]
+    })
+    if (!avaliacaoAtual.rows.length) {
+      return res.status(404).json({ erro: 'Avaliação não encontrada' })
+    }
+
+    const avaliacao = avaliacaoAtual.rows[0] as any
+    if (String(avaliacao.cliente_id) !== String(req.userId)) {
+      return res.status(403).json({ erro: 'Você não pode alterar esta avaliação' })
+    }
+
+    const atualizacoes: string[] = []
+    const args: any[] = []
+
+    if (estrelas !== undefined && Number.isInteger(estrelas) && estrelas >= 1 && estrelas <= 5) {
+      atualizacoes.push('estrelas = ?')
+      args.push(estrelas)
+    }
+
+    if (comentario !== undefined) {
+      atualizacoes.push('comentario = ?')
+      args.push(comentario || '')
+    }
+
+    if (!atualizacoes.length) {
+      return res.status(400).json({ erro: 'Nenhum campo para atualizar' })
+    }
+
+    args.push(avaliacaoId)
+    await db.execute({
+      sql: `UPDATE avaliacoes SET ${atualizacoes.join(', ')} WHERE id = ?`,
+      args
+    })
+
+    const atualizada = await db.execute({
+      sql: 'SELECT * FROM avaliacoes WHERE id = ?',
+      args: [avaliacaoId]
+    })
+    res.json(atualizada.rows[0] || { mensagem: 'Avaliação atualizada com sucesso' })
+  } catch (error) {
+    console.error('Erro ao atualizar avaliação:', error)
+    res.status(500).json({ erro: 'Erro ao atualizar avaliação' })
+  }
+})
+
+// DELETE /api/avaliacoes/:id — remover avaliação
+router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const avaliacaoId = req.params.id
+    const avaliacaoAtual = await db.execute({
+      sql: 'SELECT * FROM avaliacoes WHERE id = ?',
+      args: [avaliacaoId]
+    })
+    if (!avaliacaoAtual.rows.length) {
+      return res.status(404).json({ erro: 'Avaliação não encontrada' })
+    }
+
+    const avaliacao = avaliacaoAtual.rows[0] as any
+    if (String(avaliacao.cliente_id) !== String(req.userId)) {
+      return res.status(403).json({ erro: 'Você não pode remover esta avaliação' })
+    }
+
+    await db.execute({
+      sql: 'DELETE FROM avaliacoes WHERE id = ?',
+      args: [avaliacaoId]
+    })
+
+    res.json({ mensagem: 'Avaliação removida com sucesso' })
+  } catch (error) {
+    console.error('Erro ao remover avaliação:', error)
+    res.status(500).json({ erro: 'Erro ao remover avaliação' })
+  }
+})
+
 export default router

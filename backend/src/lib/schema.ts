@@ -38,6 +38,9 @@ export async function ensureDatabaseHealth() {
       await ensureColumn('pedidos', 'comentario', 'TEXT')
       await ensureColumn('pedidos', 'updated_at', 'DATETIME')
 
+      // Tabela de clientes - colunas adicionais
+      await ensureColumn('clientes', 'deletado_em', 'DATETIME')
+
       await db.execute(`CREATE TABLE IF NOT EXISTS avaliacoes (
         id TEXT PRIMARY KEY,
         cliente_id TEXT NOT NULL,
@@ -58,6 +61,10 @@ export async function ensureDatabaseHealth() {
       await ensureColumn('avaliacoes', 'comentario', 'TEXT')
       await ensureColumn('avaliacoes', 'tipo', "TEXT DEFAULT 'restaurante'")
       await ensureColumn('avaliacoes', 'created_at', 'DATETIME')
+
+      // Tabela de tickets - colunas adicionais
+      await ensureColumn('tickets', 'resposta', 'TEXT')
+      await ensureColumn('tickets', 'updated_at', 'DATETIME')
 
       await db.execute(`CREATE TABLE IF NOT EXISTS usuarios_pendentes (
         id TEXT PRIMARY KEY,
