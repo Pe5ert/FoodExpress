@@ -11,6 +11,10 @@ function getResend() {
   return new Resend(key);
 }
 
+function emProducao() {
+  return process.env.NODE_ENV === 'production';
+}
+
 const FROM_EMAIL = process.env.FROM_EMAIL || 'FoodExpress <no-reply@resend.dev>';
 
 export async function enviarCodigoAcesso(
@@ -54,6 +58,9 @@ export async function enviarCodigoAcesso(
   try {
     const resend = getResend();
     if (!resend) {
+      if (emProducao()) {
+        throw new Error('RESEND_API_KEY não configurada para envio de e-mail em produção.');
+      }
       console.log('\n📧 === CODIGO DE EMAIL (Modo Dev) ===');
       console.log(`Para: ${email}`);
       console.log(`Código: ${codigo}`);
@@ -73,6 +80,6 @@ export async function enviarCodigoAcesso(
     return { success: true, data };
   } catch (err) {
     console.error('❌ Erro ao enviar código por email:', err);
-    return { success: false, error: err };
+    throw err;
   }
 }

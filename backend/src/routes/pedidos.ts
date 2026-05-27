@@ -70,6 +70,15 @@ function chaveStripeValida(chave?: string): boolean {
   return /^sk_(test|live)_[A-Za-z0-9]+/.test(String(chave || '').trim())
 }
 
+function calcularGanhoEntregador(taxaEntrega: number, total: number, distanciaKm: number) {
+  if (Number.isFinite(taxaEntrega) && taxaEntrega > 0) return Number(taxaEntrega.toFixed(2))
+  if (Number.isFinite(distanciaKm)) {
+    const porDistancia = distanciaKm > 5 ? 12 : distanciaKm > 3 ? 8 : 5
+    return Number(porDistancia.toFixed(2))
+  }
+  return Number(Math.max(5, total * 0.12).toFixed(2))
+}
+
 // GET /api/pedidos
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
@@ -232,6 +241,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
       ? Math.max(0, Math.min(descontoSolicitado, subtotal + taxa_entrega))
       : 0
     const total = Number(Math.max(0, subtotal + taxa_entrega - desconto).toFixed(2))
+    const ganho_entregador = calcularGanhoEntregador(taxa_entrega, total, dist)
 
     const trocoSolicitado = Number(trocoInformado || 0)
     const troco = Number.isFinite(trocoSolicitado) && trocoSolicitado > 0 ? trocoSolicitado : 0
@@ -261,13 +271,14 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     await db.execute({
       sql: `INSERT INTO pedidos
             (id, cliente_id, restaurante_id, status, itens, endereco_entrega, latitude_entrega, longitude_entrega,
-             subtotal, taxa_entrega, desconto, troco, total, forma_pagamento, pagamento_id, pagamento_status)
-            VALUES (?, ?, ?, 'pendente', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente')`,
+             subtotal, taxa_entrega, desconto, troco, total, forma_pagamento, pagamento_id, pagamento_status,
+             ganho_entregador, repasse_entregador_status)
+            VALUES (?, ?, ?, 'pendente', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', ?, 'pendente')`,
       args: [pedidoId, clienteFinal, restauranteId, JSON.stringify(itens), endereco_entrega || '', latitude || 0, longitude || 0,
-             subtotal, taxa_entrega, desconto, troco, total, forma_pagamento, pagamento_id]
+             subtotal, taxa_entrega, desconto, troco, total, forma_pagamento, pagamento_id, ganho_entregador]
     })
 
-    res.status(201).json({ mensagem: 'Pedido criado com sucesso', id: pedidoId, clientSecret, subtotal, taxa_entrega, desconto, total })
+    res.status(201).json({ mensagem: 'Pedido criado com sucesso', id: pedidoId, clientSecret, subtotal, taxa_entrega, desconto, total, ganho_entregador })
   } catch (error) {
     console.error(error)
     res.status(500).json({ erro: 'Erro ao criar pedido' })
@@ -278,7 +289,10 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
 router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const { status, tempo_preparo_estimado } = req.body
-    const pedidoAntes = await db.execute({ sql: 'SELECT status, entregador_id, cliente_id, restaurante_id FROM pedidos WHERE id = ?', args: [req.params.id] })
+    const pedidoAntes = await db.execute({
+      sql: 'SELECT status, entregador_id, cliente_id, restaurante_id, ganho_entregador, taxa_entrega, total, distancia_km, repasse_entregador_status FROM pedidos WHERE id = ?',
+      args: [req.params.id]
+    })
     if (!pedidoAntes.rows.length) return res.status(404).json({ erro: 'Pedido não encontrado' }) as any
     if (!(await podeAcessarPedido(req, pedidoAntes.rows[0]))) return res.status(403).json({ erro: 'Você não pode alterar este pedido' }) as any
     const role = String(req.userRole || '').toLowerCase()
@@ -294,6 +308,7 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       if (!permitidos.includes(String(status))) return res.status(403).json({ erro: 'Status não permitido para este perfil' }) as any
     }
     const statusAnterior = (pedidoAntes.rows[0] as any)?.status
+    let ganhoCreditado = 0
     const sets: string[] = ['updated_at = current_timestamp']
     const args: any[] = []
     if (status) {
@@ -307,19 +322,35 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     args.push(req.params.id)
     await db.execute({ sql: `UPDATE pedidos SET ${sets.join(', ')} WHERE id = ?`, args })
     if (status === 'entregue' && statusAnterior !== 'entregue') {
-      const entregadorId = (pedidoAntes.rows[0] as any)?.entregador_id
-      if (entregadorId) {
+      const pedido = pedidoAntes.rows[0] as any
+      const entregadorId = pedido?.entregador_id
+      const jaCreditado = String(pedido?.repasse_entregador_status || '').toLowerCase() === 'pago'
+      if (entregadorId && !jaCreditado) {
+        const ganho = Number(pedido.ganho_entregador || 0) > 0
+          ? Number(pedido.ganho_entregador)
+          : calcularGanhoEntregador(Number(pedido.taxa_entrega || 0), Number(pedido.total || 0), Number(pedido.distancia_km))
+        ganhoCreditado = ganho
         await db.execute({
           sql: `UPDATE entregadores
                 SET total_entregas = COALESCE(total_entregas, 0) + 1,
+                    saldo_disponivel = COALESCE(saldo_disponivel, 0) + ?,
+                    saldo_total = COALESCE(saldo_total, 0) + ?,
                     status = 'disponivel',
                     ultima_atualizacao = CURRENT_TIMESTAMP
                 WHERE id = ?`,
-          args: [entregadorId]
+          args: [ganho, ganho, entregadorId]
+        })
+        await db.execute({
+          sql: `UPDATE pedidos
+                SET ganho_entregador = ?,
+                    repasse_entregador_status = 'pago',
+                    repasse_entregador_em = CURRENT_TIMESTAMP
+                WHERE id = ?`,
+          args: [ganho, req.params.id]
         })
       }
     }
-    res.json({ mensagem: 'Pedido atualizado com sucesso' })
+    res.json({ mensagem: 'Pedido atualizado com sucesso', ganho_entregador_creditado: ganhoCreditado })
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao atualizar pedido' })
   }

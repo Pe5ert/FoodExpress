@@ -138,13 +138,18 @@ export default function Checkout() {
       .catch(() => {})
 
     if (typeof window !== 'undefined') {
+      const enderecoSalvo = localStorage.getItem('enderecoEntrega')
+      if (enderecoSalvo && !enderecoCustom) {
+        setEnderecoCustom(enderecoSalvo)
+      }
+
       const savedLocation = localStorage.getItem('localizacao')
       if (savedLocation) {
         try {
           const parsed = JSON.parse(savedLocation)
           if (parsed?.latitude && parsed?.longitude) {
             setLocalizacao(parsed)
-            if (!enderecoCustom) {
+            if (!enderecoSalvo && !enderecoCustom) {
               setEnderecoCustom(`Minha localização atual (${parsed.latitude.toFixed(5)}, ${parsed.longitude.toFixed(5)})`)
             }
           }

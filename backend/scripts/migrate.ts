@@ -18,6 +18,19 @@ async function ensureColumn(table: string, column: string, definition: string) {
   }
 }
 
+function normalizarEmail(email?: string) {
+  return String(email || '').trim().toLowerCase()
+}
+
+function idEstavel(valor: string) {
+  return String(valor || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 48) || 'principal'
+}
+
 async function migrate() {
   console.log('🗄️  Executando migrations...')
 
@@ -90,6 +103,44 @@ async function migrate() {
   await ensureColumn('pedidos', 'avaliacao_entregador', 'INTEGER')
   await ensureColumn('pedidos', 'comentario', 'TEXT')
   await ensureColumn('pedidos', 'updated_at', 'DATETIME')
+  await ensureColumn('pedidos', 'ganho_entregador', 'REAL DEFAULT 0')
+  await ensureColumn('pedidos', 'repasse_entregador_status', "TEXT DEFAULT 'pendente'")
+  await ensureColumn('pedidos', 'repasse_entregador_em', 'DATETIME')
+  await ensureColumn('entregadores', 'saldo_disponivel', 'REAL DEFAULT 0')
+  await ensureColumn('entregadores', 'saldo_total', 'REAL DEFAULT 0')
+
+  await db.execute(`CREATE TABLE IF NOT EXISTS operadores (
+    id TEXT PRIMARY KEY,
+    user_id TEXT UNIQUE NOT NULL,
+    nome TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    telefone TEXT,
+    turno TEXT,
+    status TEXT DEFAULT 'ativo',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`)
+
+  const operadorEmail = normalizarEmail(process.env.OPERATOR_EMAIL || process.env.OPERADOR_EMAIL)
+  if (operadorEmail) {
+    const operadorBaseId = idEstavel(operadorEmail)
+    await db.execute({
+      sql: `INSERT INTO operadores (id, user_id, nome, email, telefone, turno, status)
+            VALUES (?, ?, ?, ?, ?, ?, 'ativo')
+            ON CONFLICT(email) DO UPDATE SET
+              nome = excluded.nome,
+              telefone = COALESCE(NULLIF(excluded.telefone, ''), operadores.telefone),
+              status = 'ativo'`,
+      args: [
+        `op_${operadorBaseId}`,
+        `op_${operadorBaseId}`,
+        process.env.OPERATOR_NAME || process.env.OPERADOR_NOME || 'Operador FoodExpress',
+        operadorEmail,
+        process.env.OPERATOR_PHONE || process.env.OPERADOR_TELEFONE || '',
+        process.env.OPERATOR_SHIFT || process.env.OPERADOR_TURNO || 'geral',
+      ]
+    })
+    console.log(`  ✅ Operador ativo garantido: ${operadorEmail}`)
+  }
 
   const extras = [
     `CREATE TABLE IF NOT EXISTS cupons (

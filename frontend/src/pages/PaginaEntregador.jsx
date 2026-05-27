@@ -5,7 +5,7 @@ import {
   MapPin, Navigation, Clock, CheckCircle, Package,
   Phone, Star, DollarSign, Bike, BarChart3, Bell,
   LogOut, ChevronRight, XCircle, AlertCircle, X,
-  TrendingUp, ArrowUpRight, Wifi, WifiOff
+  TrendingUp, ArrowUpRight, Wifi, WifiOff, Wallet
 } from 'lucide-react'
 import logoSrc from '../imgs/Logo-site.png'
 import api from '../services/api'
@@ -49,7 +49,7 @@ function numeroPedido(id, tamanho = 6) {
 
 function normalizarEntregaAtiva(p) {
   const clienteNome = valorTexto(p.cliente_nome || p.cliente_id, 'Cliente')
-  const ganho = Number(p.taxa_entrega ?? 0) || Number(p.total || 0) * 0.2
+  const ganho = Number(p.ganho_entregador ?? 0) || Number(p.taxa_entrega ?? 0) || Number(p.total || 0) * 0.2
   return {
     id: numeroPedido(p.id, 4),
     cliente: {
@@ -495,6 +495,8 @@ export default function PaginaEntregador() {
   const [tendenciaSemana, setTendenciaSemana] = useState(null)
   const [entregadorId, setEntregadorId] = useState(null)
   const [avaliacaoEntregador, setAvaliacaoEntregador] = useState(0)
+  const [saldoDisponivel, setSaldoDisponivel] = useState(0)
+  const [saldoTotal, setSaldoTotal] = useState(0)
   const [refreshEntregas, setRefreshEntregas] = useState(0)
   const [ganhoEntregaConcluida, setGanhoEntregaConcluida] = useState(0)
 
@@ -522,6 +524,8 @@ export default function PaginaEntregador() {
       if (!ent?.id) return
       setEntregadorId(ent.id)
       setAvaliacaoEntregador(Number(ent.avaliacao_media || 0))
+      setSaldoDisponivel(Number(ent.saldo_disponivel || 0))
+      setSaldoTotal(Number(ent.saldo_total || 0))
       if (ent.latitude !== undefined && ent.longitude !== undefined && Number(ent.latitude) !== 0 && Number(ent.longitude) !== 0) {
         setLocalizacao({ latitude: Number(ent.latitude), longitude: Number(ent.longitude) })
       }
@@ -548,7 +552,7 @@ export default function PaginaEntregador() {
         id: numeroPedido(p.id, 4),
         loja: p.restaurante_nome || p.restaurante_id, emoji: '🍽️',
         cliente: p.cliente_nome || p.cliente_id,
-        valor: Number(p.taxa_entrega ?? 0) || Number(p.total || 0) * 0.2,
+        valor: Number(p.ganho_entregador ?? 0) || Number(p.taxa_entrega ?? 0) || Number(p.total || 0) * 0.2,
         tempo: p.tempo_entrega_estimado ? `${p.tempo_entrega_estimado} min` : '--',
         avaliacao: Number(p.avaliacao_entregador || 0),
         horario: formatarHoraBanco(p.created_at),
@@ -568,7 +572,7 @@ export default function PaginaEntregador() {
           d.setDate(d.getDate() - dia + 1)
           return d
         }
-        const comissaoPedido = (p) => Number(p.taxa_entrega ?? 0) || Number(p.total || 0) * 0.2
+        const comissaoPedido = (p) => Number(p.ganho_entregador ?? 0) || Number(p.taxa_entrega ?? 0) || Number(p.total || 0) * 0.2
         const hoje = inicioDoDia(new Date())
         const hojeLista = lista.filter(p => inicioDoDia(p.created_at).getTime() === hoje.getTime())
         const ganhos = hojeLista.reduce((s, p) => s + comissaoPedido(p), 0)
@@ -606,16 +610,16 @@ export default function PaginaEntregador() {
           id: numeroPedido(p.id, 4),
           loja: p.restaurante_nome || p.restaurante_id, emoji: '🍽️',
           cliente: p.cliente_nome || p.cliente_id,
-          valor: Number(p.taxa_entrega ?? 0) || Number(p.total || 0) * 0.2,
+          valor: Number(p.ganho_entregador ?? 0) || Number(p.taxa_entrega ?? 0) || Number(p.total || 0) * 0.2,
           tempo: p.tempo_entrega_estimado ? `${p.tempo_entrega_estimado} min` : '--',
           avaliacao: Number(p.avaliacao_entregador || 0),
           horario: formatarHoraBanco(p.created_at),
         })))
         setStats([
           { label: 'Ganhos hoje', valor: `R$ ${ganhos.toFixed(2)}`, icon: DollarSign, cor: 'text-accent', bg: 'bg-accent/10', variacao: '' },
+          { label: 'Saldo disponível', valor: `R$ ${saldoDisponivel.toFixed(2)}`, icon: Wallet, cor: 'text-accent', bg: 'bg-accent/10', variacao: `Total R$ ${saldoTotal.toFixed(2)}` },
           { label: 'Entregas hoje', valor: String(totalEntregas), icon: Package, cor: 'text-primary', bg: 'bg-primary-light', variacao: '' },
           { label: 'Total entregas', valor: String(lista.length), icon: Bike, cor: 'text-secondary', bg: 'bg-secondary/10', variacao: 'all time' },
-          { label: 'Avaliação', valor: avaliacaoEntregador ? avaliacaoEntregador.toFixed(1) : '—', icon: Star, cor: 'text-yellow-500', bg: 'bg-yellow-50', variacao: 'média' },
         ])
       }).catch(() => {
         setGanhosSemana([
@@ -627,12 +631,12 @@ export default function PaginaEntregador() {
         setTendenciaSemana(null)
         setStats([
           { label: 'Ganhos hoje', valor: 'R$ 0,00', icon: DollarSign, cor: 'text-accent', bg: 'bg-accent/10', variacao: '' },
+          { label: 'Saldo disponível', valor: `R$ ${saldoDisponivel.toFixed(2)}`, icon: Wallet, cor: 'text-accent', bg: 'bg-accent/10', variacao: `Total R$ ${saldoTotal.toFixed(2)}` },
           { label: 'Entregas hoje', valor: '0', icon: Package, cor: 'text-primary', bg: 'bg-primary-light', variacao: '' },
           { label: 'Total entregas', valor: '0', icon: Bike, cor: 'text-secondary', bg: 'bg-secondary/10', variacao: 'all time' },
-          { label: 'Avaliação', valor: '—', icon: Star, cor: 'text-yellow-500', bg: 'bg-yellow-50', variacao: 'média' },
         ])
       })
-  }, [entregadorId, avaliacaoEntregador, refreshEntregas])
+  }, [entregadorId, avaliacaoEntregador, refreshEntregas, saldoDisponivel, saldoTotal])
 
 
 
@@ -759,14 +763,23 @@ export default function PaginaEntregador() {
       }
     } else {
       // Entregue ao cliente
+      let ganhoCreditado = Number(entrega.valor || 0)
       if (entrega._id) {
-        await api.pedidos.atualizarStatus(entrega._id, 'entregue').catch(console.error)
+        const resposta = await api.pedidos.atualizarStatus(entrega._id, 'entregue').catch((err) => {
+          console.error(err)
+          return null
+        })
+        if (Number(resposta?.ganho_entregador_creditado || 0) > 0) {
+          ganhoCreditado = Number(resposta.ganho_entregador_creditado)
+          setSaldoDisponivel(v => v + ganhoCreditado)
+          setSaldoTotal(v => v + ganhoCreditado)
+        }
         // Libera o entregador
         if (entregadorId) {
           await api.entregadores.atualizarDisponibilidade(entregadorId, true).catch(console.error)
         }
       }
-      setGanhoEntregaConcluida(Number(entrega.valor || 0))
+      setGanhoEntregaConcluida(ganhoCreditado)
       setEntregaAtiva(null)
       setEntregaConcluida(true)
       setRefreshEntregas(v => v + 1)

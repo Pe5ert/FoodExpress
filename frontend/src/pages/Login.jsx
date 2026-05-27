@@ -444,12 +444,6 @@ export default function Login() {
                 </Motion.div>
               )}
 
-              {perfilLogin === 'cliente' && (
-                <Motion.button type="submit" className="text-xs text-primary font-bold self-end hover:underline bg-transparent border-none cursor-pointer" variants={fieldVariant}>
-                  Esqueceu a senha?
-                </Motion.button>
-              )}
-
               <Motion.button
                 type="submit" disabled={carregando}
                 className={`w-full py-4 text-white border-none rounded-xl font-display font-bold text-base cursor-pointer flex items-center justify-center gap-2 transition-colors disabled:bg-border disabled:text-text-muted disabled:cursor-not-allowed mt-1 ${config.ctaCls}`}

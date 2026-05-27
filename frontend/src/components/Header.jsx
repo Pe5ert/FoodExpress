@@ -25,6 +25,15 @@ export default function Header() {
     if (typeof window !== 'undefined') return localStorage.getItem('cep') || ''
     return ''
   })
+  const [dadosCep, setDadosCep] = useState(null)
+  const [numeroEndereco, setNumeroEndereco] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('enderecoNumero') || ''
+    return ''
+  })
+  const [complementoEndereco, setComplementoEndereco] = useState(() => {
+    if (typeof window !== 'undefined') return localStorage.getItem('enderecoComplemento') || ''
+    return ''
+  })
   const [regiao, setRegiao] = useState(() => {
     if (typeof window !== 'undefined') {
       return localStorage.getItem('regiao') || 'Tauape'
@@ -87,6 +96,20 @@ export default function Header() {
     return `CEP ${cepFormatado}`
   }
 
+  const montarEnderecoCompleto = (dados, cepFormatado, numero, complemento) => {
+    const logradouro = String(dados?.logradouro || '').trim()
+    const bairro = String(dados?.bairro || '').trim()
+    const cidade = String(dados?.localidade || '').trim()
+    const uf = String(dados?.uf || '').trim()
+    const partes = [
+      [logradouro || `CEP ${cepFormatado}`, numero].filter(Boolean).join(', '),
+      complemento,
+      bairro,
+      cidade && uf ? `${cidade} - ${uf}` : cidade || uf,
+    ].filter(Boolean)
+    return partes.join(' · ')
+  }
+
   const salvarCepManual = async (e) => {
     e?.preventDefault()
     const cepFormatado = formatarCep(cep)
@@ -94,6 +117,35 @@ export default function Header() {
 
     if (digitos.length !== 8) {
       setStatusLocalizacao('Digite um CEP válido com 8 números.')
+      return
+    }
+
+    if (dadosCep) {
+      if (!numeroEndereco.trim()) {
+        setStatusLocalizacao('Informe o número do endereço.')
+        return
+      }
+
+      const novaRegiao = montarNomeEndereco(dadosCep, cepFormatado)
+      const enderecoCompleto = montarEnderecoCompleto(
+        dadosCep,
+        cepFormatado,
+        numeroEndereco.trim(),
+        complementoEndereco.trim()
+      )
+
+      setRegiao(novaRegiao)
+      localStorage.setItem('cep', cepFormatado)
+      localStorage.setItem('regiao', novaRegiao)
+      localStorage.setItem('enderecoCep', JSON.stringify(dadosCep))
+      localStorage.setItem('enderecoNumero', numeroEndereco.trim())
+      localStorage.setItem('enderecoComplemento', complementoEndereco.trim())
+      localStorage.setItem('enderecoEntrega', enderecoCompleto)
+      localStorage.removeItem('localizacao')
+      window.dispatchEvent(new Event('localizacao-atualizada'))
+      setStatusLocalizacao('Endereço definido.')
+      setPopupLocalizacao(false)
+      setModoCep(false)
       return
     }
 
@@ -109,15 +161,9 @@ export default function Header() {
 
       const novaRegiao = montarNomeEndereco(dadosCep, cepFormatado)
       setCep(cepFormatado)
+      setDadosCep(dadosCep)
       setRegiao(novaRegiao)
-      localStorage.setItem('cep', cepFormatado)
-      localStorage.setItem('regiao', novaRegiao)
-      localStorage.setItem('enderecoCep', JSON.stringify(dadosCep))
-      localStorage.removeItem('localizacao')
-      window.dispatchEvent(new Event('localizacao-atualizada'))
-      setStatusLocalizacao('Endereço definido.')
-      setPopupLocalizacao(false)
-      setModoCep(false)
+      setStatusLocalizacao('Endereço encontrado. Informe número e complemento, se houver.')
     } catch {
       setStatusLocalizacao('Não foi possível consultar o CEP agora. Tente novamente ou consulte nos Correios.')
     }
@@ -140,6 +186,9 @@ export default function Header() {
         localStorage.setItem('localizacao', JSON.stringify({ latitude, longitude }))
         localStorage.removeItem('cep')
         localStorage.removeItem('enderecoCep')
+        localStorage.removeItem('enderecoNumero')
+        localStorage.removeItem('enderecoComplemento')
+        localStorage.removeItem('enderecoEntrega')
         window.dispatchEvent(new Event('localizacao-atualizada'))
         setStatusLocalizacao('Localização atual definida.')
         setPopupLocalizacao(false)
@@ -320,15 +369,49 @@ export default function Header() {
                   )}
                   {modoCep ? (
                     <form onSubmit={salvarCepManual} className="flex flex-col gap-3 pt-2">
+                      {dadosCep && (
+                        <div className="rounded-2xl border border-primary/20 bg-primary-light px-4 py-3">
+                          <p className="text-xs font-extrabold uppercase tracking-wide text-primary mb-1">Endereço encontrado</p>
+                          <p className="text-sm font-bold text-text-primary">{montarNomeEndereco(dadosCep, formatarCep(cep))}</p>
+                          <p className="text-xs font-semibold text-text-muted">
+                            {[dadosCep.localidade, dadosCep.uf].filter(Boolean).join(' - ')}
+                          </p>
+                        </div>
+                      )}
                       <input
                         type="text"
                         inputMode="numeric"
                         autoComplete="postal-code"
                         value={cep}
-                        onChange={(e) => setCep(formatarCep(e.target.value))}
+                        onChange={(e) => {
+                          setCep(formatarCep(e.target.value))
+                          setDadosCep(null)
+                        }}
                         placeholder="00000-000"
                         className="w-full h-12 rounded-2xl border border-border bg-white px-4 text-base font-bold text-text-primary outline-none transition-all focus:border-primary"
                       />
+                      {dadosCep && (
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[0.8fr_1.2fr]">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="address-line2"
+                            value={numeroEndereco}
+                            onChange={(e) => setNumeroEndereco(e.target.value.replace(/[^\dA-Za-z/-]/g, '').slice(0, 12))}
+                            placeholder="Número"
+                            className="w-full h-12 rounded-2xl border border-border bg-white px-4 text-sm font-bold text-text-primary outline-none transition-all focus:border-primary"
+                            required
+                          />
+                          <input
+                            type="text"
+                            autoComplete="address-line3"
+                            value={complementoEndereco}
+                            onChange={(e) => setComplementoEndereco(e.target.value.slice(0, 80))}
+                            placeholder="Complemento: apto, bloco, condomínio"
+                            className="w-full h-12 rounded-2xl border border-border bg-white px-4 text-sm font-semibold text-text-primary outline-none transition-all focus:border-primary"
+                          />
+                        </div>
+                      )}
                       <a
                         href="https://buscacepinter.correios.com.br/app/endereco/index.php"
                         target="_blank"
@@ -341,7 +424,7 @@ export default function Header() {
                         type="submit"
                         className="w-full py-3 bg-primary text-white rounded-2xl font-bold transition-all hover:bg-primary/90"
                       >
-                        Usar este CEP
+                        {dadosCep ? 'Salvar endereço' : 'Buscar endereço'}
                       </button>
                       <button
                         type="button"

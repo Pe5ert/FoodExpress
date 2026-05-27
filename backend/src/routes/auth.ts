@@ -40,12 +40,6 @@ function normalizarEmail(email: string) {
   return String(email || '').trim().toLowerCase();
 }
 
-function normalizarTelefone(telefone: string) {
-  const digitos = String(telefone || '').replace(/\D/g, '');
-  if (!digitos) return '';
-  return digitos.startsWith('55') ? digitos : `55${digitos}`;
-}
-
 function gerarCodigoVerificacao() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
@@ -69,27 +63,6 @@ async function buscarPerfisPorEmail(email: string) {
 
   const operador = await db.execute({ sql: 'SELECT id FROM operadores WHERE lower(email) = ? LIMIT 1', args: [emailLimpo] });
   if (operador.rows.length) perfis.push('operador');
-
-  return perfis;
-}
-
-async function buscarPerfisPorTelefone(telefone: string) {
-  const tel = normalizarTelefone(telefone);
-  const perfis: string[] = [];
-  if (!tel) return perfis;
-  const like = `%${tel.slice(-11)}%`;
-
-  const cliente = await db.execute({ sql: "SELECT id FROM clientes WHERE replace(replace(replace(replace(replace(telefone, '+', ''), ' ', ''), '-', ''), '(', ''), ')', '') LIKE ? LIMIT 1", args: [like] });
-  if (cliente.rows.length) perfis.push('cliente');
-
-  const entregador = await db.execute({ sql: "SELECT id FROM entregadores WHERE replace(replace(replace(replace(replace(telefone, '+', ''), ' ', ''), '-', ''), '(', ''), ')', '') LIKE ? LIMIT 1", args: [like] });
-  if (entregador.rows.length) perfis.push('entregador');
-
-  const restaurante = await db.execute({ sql: "SELECT id FROM restaurantes WHERE replace(replace(replace(replace(replace(telefone, '+', ''), ' ', ''), '-', ''), '(', ''), ')', '') LIKE ? LIMIT 1", args: [like] });
-  if (restaurante.rows.length) perfis.push('restaurante');
-
-  const gerente = await db.execute({ sql: "SELECT id FROM gerentes WHERE replace(replace(replace(replace(replace(telefone, '+', ''), ' ', ''), '-', ''), '(', ''), ')', '') LIKE ? LIMIT 1", args: [like] });
-  if (gerente.rows.length) perfis.push('gerente');
 
   return perfis;
 }
@@ -318,118 +291,6 @@ router.post('/login/confirmar', async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ erro: 'Erro ao confirmar login' });
-  }
-});
-
-// ── POST /api/auth/telefone/iniciar ──────────────────────────────────────────
-// Fluxo sem SMS pago: gera código e link WhatsApp para envio/conferência manual.
-router.post('/telefone/iniciar', async (req, res) => {
-  try {
-    const { nome, telefone } = req.body;
-    const telefoneLimpo = normalizarTelefone(telefone);
-    if (!telefoneLimpo) return res.status(400).json({ erro: 'Telefone obrigatório' });
-
-    const perfisExistentes = await buscarPerfisPorTelefone(telefoneLimpo);
-    const outrosPerfis = perfisExistentes.filter(p => p !== 'cliente');
-    if (outrosPerfis.length) {
-      return res.status(409).json({ erro: `Este telefone já está cadastrado como perfil ${outrosPerfis.join(', ')}.` });
-    }
-
-    const token = crypto.randomUUID();
-    const codigo = String(Math.floor(100000 + Math.random() * 900000));
-    const expira = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-    const pendingId = `tel_${crypto.randomUUID().slice(0, 12)}`;
-
-    await db.execute({
-      sql: `INSERT INTO usuarios_pendentes
-            (id, nome, telefone, token, codigo, tipo, expira_em, criado_em)
-            VALUES (?, ?, ?, ?, ?, 'telefone', ?, CURRENT_TIMESTAMP)`,
-      args: [pendingId, nome || '', telefoneLimpo, token, codigo, expira]
-    });
-
-    const numeroDestino = normalizarTelefone(process.env.WHATSAPP_VERIFICATION_NUMBER || telefoneLimpo);
-    const texto = `FoodExpress: meu codigo de verificacao e ${codigo}`;
-    const whatsappLink = `https://wa.me/${numeroDestino}?text=${encodeURIComponent(texto)}`;
-
-    res.json({
-      mensagem: 'Código de verificação gerado.',
-      token,
-      whatsappLink,
-      expira_em: expira,
-      ...(process.env.NODE_ENV !== 'production' && { devCode: codigo })
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ erro: 'Erro ao iniciar verificação por telefone' });
-  }
-});
-
-// ── POST /api/auth/telefone/confirmar ────────────────────────────────────────
-router.post('/telefone/confirmar', async (req, res) => {
-  try {
-    const { token, codigo } = req.body;
-    if (!token || !codigo) return res.status(400).json({ erro: 'Token e código são obrigatórios' });
-
-    const pending = await db.execute({
-      sql: `SELECT * FROM usuarios_pendentes
-            WHERE token = ? AND codigo = ? AND tipo = 'telefone' AND usado = 0 AND expira_em > datetime('now')`,
-      args: [token, String(codigo).trim()]
-    });
-    if (!pending.rows.length) {
-      return res.status(400).json({ erro: 'Código inválido ou expirado' });
-    }
-
-    const row = pending.rows[0] as any;
-    const telefone = normalizarTelefone(row.telefone);
-    const emailLocal = `${telefone}@telefone.local`;
-    const nome = row.nome || `Cliente ${telefone.slice(-4)}`;
-
-    const perfisExistentes = await buscarPerfisPorTelefone(telefone);
-    const outrosPerfis = perfisExistentes.filter(p => p !== 'cliente');
-    if (outrosPerfis.length) {
-      return res.status(409).json({ erro: `Este telefone já está cadastrado como perfil ${outrosPerfis.join(', ')}.` });
-    }
-
-    const existente = await db.execute({
-      sql: `SELECT * FROM clientes
-            WHERE replace(replace(replace(replace(replace(telefone, '+', ''), ' ', ''), '-', ''), '(', ''), ')', '') LIKE ?
-               OR lower(email) = ?
-            ORDER BY created_at DESC LIMIT 1`,
-      args: [`%${telefone.slice(-11)}%`, emailLocal]
-    });
-
-    let cliente: any = existente.rows[0];
-    if (!cliente) {
-      const clienteId = `cli_tel_${crypto.randomUUID().slice(0, 8)}`;
-      await db.execute({
-        sql: `INSERT INTO clientes (id, user_id, nome, email, telefone, total_pedidos)
-              VALUES (?, ?, ?, ?, ?, 0)`,
-        args: [clienteId, clienteId, nome, emailLocal, `+${telefone}`]
-      });
-      const criado = await db.execute({ sql: 'SELECT * FROM clientes WHERE id = ?', args: [clienteId] });
-      cliente = criado.rows[0];
-    }
-
-    await db.execute({ sql: 'UPDATE usuarios_pendentes SET usado = 1 WHERE token = ?', args: [token] });
-
-    const jwt_token = gerarToken(cliente.id, 'cliente', {
-      email: cliente.email,
-      nome: cliente.nome,
-    });
-
-    res.json({
-      token: jwt_token,
-      usuario: {
-        id: cliente.id,
-        nome: cliente.nome,
-        email: cliente.email,
-        telefone: cliente.telefone || `+${telefone}`,
-        perfil: 'cliente',
-      }
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ erro: 'Erro ao confirmar telefone' });
   }
 });
 

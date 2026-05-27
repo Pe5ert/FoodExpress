@@ -2,17 +2,10 @@ import { useState } from 'react'
 import { mascaraTelefone } from '../utils/mascaras'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate, Link } from 'react-router-dom'
-import { Mail, Phone, ArrowLeft, Check, Send, User, MessageCircle } from 'lucide-react'
+import { Mail, Phone, ArrowLeft, Send, User } from 'lucide-react'
 import { motion as Motion } from 'framer-motion'
 import logoSrc from '../imgs/Logo-site.png'
 import api from '../services/api'
-
-const beneficiosCadastroUsuario = [
-  'Peça em centenas de restaurantes',
-  'Acompanhe seu pedido em tempo real',
-  'Pagamento rápido e seguro',
-  'Ofertas exclusivas para membros',
-]
 
 const itemVariants = {
   hidden: { opacity: 0, y: 16 },
@@ -20,14 +13,10 @@ const itemVariants = {
 }
 
 export default function CadastroUsuario() {
-  const [modo, setModo] = useState('email') // 'email' | 'telefone'
   const [dados, setDados] = useState({ nome: '', email: '', telefone: '' })
-  const [enviado, setEnviado] = useState(false)
   const [carregando, setCarregando] = useState(false)
   const [aceitouTermos, setAceitouTermos] = useState(false)
   const [erro, setErro] = useState('')
-  const [verificacaoTelefone, setVerificacaoTelefone] = useState(null)
-  const [codigoTelefone, setCodigoTelefone] = useState('')
   const [verificacaoEmail, setVerificacaoEmail] = useState(null)
   const [codigoEmail, setCodigoEmail] = useState('')
   const { cadastrarCliente, aplicarSessao } = useAuth()
@@ -37,20 +26,13 @@ export default function CadastroUsuario() {
     e.preventDefault()
     if (!aceitouTermos) return
     if (!dados.nome.trim()) return
-    if (modo === 'email' && !dados.email.trim()) return
-    if (modo === 'telefone' && !dados.telefone.trim()) return
+    if (!dados.email.trim()) return
 
     setCarregando(true)
     setErro('')
     try {
-      if (modo === 'email') {
-        const resposta = await cadastrarCliente({ nome: dados.nome, email: dados.email, telefone: dados.telefone })
-        setVerificacaoEmail(resposta)
-      } else {
-        const resposta = await api.auth.telefoneIniciar({ nome: dados.nome, telefone: dados.telefone })
-        setVerificacaoTelefone(resposta)
-        if (resposta?.whatsappLink) window.open(resposta.whatsappLink, '_blank', 'noopener,noreferrer')
-      }
+      const resposta = await cadastrarCliente({ nome: dados.nome, email: dados.email, telefone: dados.telefone })
+      setVerificacaoEmail(resposta)
     } catch (err) {
       console.error(err)
       setErro(err?.message || 'Não foi possível criar sua conta.')
@@ -68,24 +50,6 @@ export default function CadastroUsuario() {
       const resposta = await api.auth.emailConfirmar({
         token: verificacaoEmail.token,
         codigo: codigoEmail,
-      })
-      aplicarSessao(resposta.token, resposta.usuario)
-    } catch (err) {
-      setErro(err?.message || 'Código inválido.')
-    } finally {
-      setCarregando(false)
-    }
-  }
-
-  const confirmarTelefone = async (e) => {
-    e.preventDefault()
-    if (!verificacaoTelefone?.token || !codigoTelefone.trim()) return
-    setCarregando(true)
-    setErro('')
-    try {
-      const resposta = await api.auth.telefoneConfirmar({
-        token: verificacaoTelefone.token,
-        codigo: codigoTelefone,
       })
       aplicarSessao(resposta.token, resposta.usuario)
     } catch (err) {
@@ -121,25 +85,11 @@ export default function CadastroUsuario() {
 
         <Motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}>
           <h1 className="font-display text-4xl xl:text-5xl font-extrabold text-white leading-tight tracking-tight mb-4">
-            Crie sua conta<br />e <span className="text-yellow-300">peça agora!</span>
+            Crie sua conta<br />no <span className="text-yellow-300">FoodExpress</span>
           </h1>
-          <p className="text-white/75 text-base font-medium leading-relaxed max-w-85 mb-10">
-            Cadastre-se grátis e tenha acesso aos melhores restaurantes e mercados da sua região.
+          <p className="text-white/75 text-base font-medium leading-relaxed max-w-85">
+            Use seu e-mail para criar uma conta com segurança.
           </p>
-
-          <div className="flex flex-col gap-3">
-            {beneficiosCadastroUsuario.map((b, i) => (
-              <Motion.div key={b}
-                initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 + i * 0.1, duration: 0.35 }}
-                className="flex items-center gap-3">
-                <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center shrink-0">
-                  <Check size={13} className="text-white" strokeWidth={3} />
-                </div>
-                <span className="text-white/85 text-sm font-semibold">{b}</span>
-              </Motion.div>
-            ))}
-          </div>
         </Motion.div>
       </div>
 
@@ -160,23 +110,7 @@ export default function CadastroUsuario() {
           </button>
 
           <h2 className="font-display text-2xl font-extrabold text-text-primary mb-1 tracking-tight">Criar conta grátis</h2>
-          <p className="text-sm text-text-muted font-semibold mb-5">Rápido e fácil, leva menos de 1 minuto</p>
-
-          {/* Seletor de modo */}
-          <div className="flex gap-2 p-1 bg-surface-2 rounded-xl mb-6 border border-border">
-            <button
-              onClick={() => setModo('email')}
-              className={`flex-1 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer border-none ${modo === 'email' ? 'bg-white text-primary shadow-sm' : 'bg-transparent text-text-muted hover:text-text-primary'}`}
-            >
-              📧 Por e-mail
-            </button>
-            <button
-              onClick={() => setModo('telefone')}
-              className={`flex-1 py-2 rounded-lg text-xs font-extrabold transition-all cursor-pointer border-none ${modo === 'telefone' ? 'bg-white text-primary shadow-sm' : 'bg-transparent text-text-muted hover:text-text-primary'}`}
-            >
-              📱 Por telefone
-            </button>
-          </div>
+          <p className="text-sm text-text-muted font-semibold mb-5">Você receberá um código de confirmação por e-mail</p>
 
           {erro && (
             <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
@@ -215,59 +149,6 @@ export default function CadastroUsuario() {
                 Trocar e-mail
               </button>
             </form>
-          ) : verificacaoTelefone ? (
-            <form onSubmit={confirmarTelefone} className="flex flex-col items-center text-center py-6 gap-4">
-              <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center">
-                <MessageCircle size={28} className="text-accent" />
-              </div>
-              <div>
-                <h3 className="font-display text-xl font-extrabold text-text-primary mb-1">Confirme seu telefone</h3>
-                <p className="text-sm text-text-muted font-semibold leading-relaxed">
-                  Envie a mensagem pelo WhatsApp e digite o código gerado.
-                </p>
-              </div>
-              {verificacaoTelefone.whatsappLink && (
-                <a href={verificacaoTelefone.whatsappLink} target="_blank" rel="noreferrer"
-                  className="w-full py-3 bg-accent text-white rounded-xl text-sm font-bold">
-                  Abrir WhatsApp
-                </a>
-              )}
-              {import.meta.env.DEV && verificacaoTelefone.devCode && (
-                <p className="text-xs text-text-muted font-semibold">Código dev: <strong className="text-text-primary">{verificacaoTelefone.devCode}</strong></p>
-              )}
-              <input
-                value={codigoTelefone}
-                onChange={e => setCodigoTelefone(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="Código de 6 dígitos"
-                className={inputClass.replace('pl-10', 'pl-4')}
-                required
-              />
-              <button type="submit" disabled={carregando}
-                className="w-full py-4 bg-primary text-white border-none rounded-xl font-display font-bold text-base cursor-pointer disabled:bg-border disabled:text-text-muted">
-                {carregando ? 'Confirmando...' : 'Confirmar telefone'}
-              </button>
-              <button type="button" onClick={() => { setVerificacaoTelefone(null); setCodigoTelefone('') }}
-                className="text-xs text-text-muted font-bold bg-transparent border-none cursor-pointer hover:underline">
-                Trocar telefone
-              </button>
-            </form>
-          ) : enviado ? (
-            <Motion.div
-              className="flex flex-col items-center text-center py-6 gap-4"
-              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-            >
-              <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center">
-                <Send size={28} className="text-accent" />
-              </div>
-              <div>
-                <h3 className="font-display text-xl font-extrabold text-text-primary mb-1">Verifique seu e-mail!</h3>
-                <p className="text-sm text-text-muted font-semibold leading-relaxed">
-                  Enviamos um código de acesso para<br />
-                  <strong className="text-text-primary">{dados.email}</strong>
-                </p>
-              </div>
-              <p className="text-xs text-text-muted">Não recebeu? Verifique o spam ou <button onClick={() => setEnviado(false)} className="text-primary font-bold bg-transparent border-none cursor-pointer hover:underline">tente novamente</button></p>
-            </Motion.div>
           ) : (
             <form onSubmit={handleEnviar} className="flex flex-col gap-4">
               {/* Nome */}
@@ -280,36 +161,22 @@ export default function CadastroUsuario() {
                 </div>
               </Motion.div>
 
-              {modo === 'email' ? (
-                <>
-                  <Motion.div className="flex flex-col gap-1.5" variants={itemVariants} initial="hidden" animate="show" transition={{ delay: 0.08 }}>
-                    <label className="text-xs font-extrabold text-text-secondary uppercase tracking-wide">E-mail *</label>
-                    <div className="relative">
-                      <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
-                      <input name="email" type="email" placeholder="seu@email.com"
-                        value={dados.email} onChange={handleChange} required className={inputClass} />
-                    </div>
-                  </Motion.div>
-                  <Motion.div className="flex flex-col gap-1.5" variants={itemVariants} initial="hidden" animate="show" transition={{ delay: 0.16 }}>
-                    <label className="text-xs font-extrabold text-text-secondary uppercase tracking-wide">Telefone (opcional)</label>
-                    <div className="relative">
-                      <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
-                      <input name="telefone" type="tel" placeholder="(11) 99999-9999"
-                        value={dados.telefone} onChange={handleChange} className={inputClass} />
-                    </div>
-                  </Motion.div>
-                </>
-              ) : (
-                <Motion.div className="flex flex-col gap-1.5" variants={itemVariants} initial="hidden" animate="show" transition={{ delay: 0.08 }}>
-                  <label className="text-xs font-extrabold text-text-secondary uppercase tracking-wide">WhatsApp / Telefone *</label>
-                  <div className="relative">
-                    <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
-                    <input name="telefone" type="tel" placeholder="(11) 99999-9999"
-                      value={dados.telefone} onChange={handleChange} required className={inputClass} />
-                  </div>
-                  <p className="text-xs text-text-muted font-medium mt-0.5">Seu número será seu identificador de acesso</p>
-                </Motion.div>
-              )}
+              <Motion.div className="flex flex-col gap-1.5" variants={itemVariants} initial="hidden" animate="show" transition={{ delay: 0.08 }}>
+                <label className="text-xs font-extrabold text-text-secondary uppercase tracking-wide">E-mail *</label>
+                <div className="relative">
+                  <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                  <input name="email" type="email" placeholder="seu@email.com"
+                    value={dados.email} onChange={handleChange} required className={inputClass} />
+                </div>
+              </Motion.div>
+              <Motion.div className="flex flex-col gap-1.5" variants={itemVariants} initial="hidden" animate="show" transition={{ delay: 0.16 }}>
+                <label className="text-xs font-extrabold text-text-secondary uppercase tracking-wide">Telefone (opcional)</label>
+                <div className="relative">
+                  <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                  <input name="telefone" type="tel" placeholder="(11) 99999-9999"
+                    value={dados.telefone} onChange={handleChange} className={inputClass} />
+                </div>
+              </Motion.div>
 
               <label className="flex items-start gap-2.5 cursor-pointer">
                 <input type="checkbox" checked={aceitouTermos} onChange={e => setAceitouTermos(e.target.checked)}
@@ -323,9 +190,7 @@ export default function CadastroUsuario() {
                 className="w-full py-4 bg-primary text-white border-none rounded-xl font-display font-bold text-base cursor-pointer disabled:bg-border disabled:text-text-muted disabled:cursor-not-allowed"
                 whileHover={{ scale: 1.02, boxShadow: '0 4px 20px rgba(255,107,53,0.35)' }}
                 whileTap={{ scale: 0.98 }}>
-                {carregando
-                  ? (modo === 'email' ? 'Enviando código...' : 'Gerando código...')
-                  : (modo === 'email' ? 'Criar conta — receber código por e-mail' : 'Criar conta com telefone')}
+                {carregando ? 'Enviando código...' : 'Criar conta'}
               </Motion.button>
             </form>
           )}
@@ -339,10 +204,6 @@ export default function CadastroUsuario() {
             Entrar na minha conta
           </button>
 
-          <button type="button" onClick={() => navigate('/register/store')}
-            className="mt-2 w-full py-3 bg-transparent border border-border rounded-xl text-sm font-semibold text-text-secondary cursor-pointer transition-all hover:border-secondary hover:text-secondary hover:bg-secondary/5 flex items-center justify-center gap-2">
-            🏪 Sou dono de restaurante ou mercado
-          </button>
         </Motion.div>
       </div>
     </div>

@@ -70,8 +70,6 @@ export const api = {
     loginConfirmar: (dados) => request('/api/auth/login/confirmar', { method: 'POST', body: JSON.stringify(dados) }),
     registrar: (dados) => request('/api/auth/registrar', { method: 'POST', body: JSON.stringify(dados) }),
     emailConfirmar: (dados) => request('/api/auth/email/confirmar', { method: 'POST', body: JSON.stringify(dados) }),
-    telefoneIniciar: (dados) => request('/api/auth/telefone/iniciar', { method: 'POST', body: JSON.stringify(dados) }),
-    telefoneConfirmar: (dados) => request('/api/auth/telefone/confirmar', { method: 'POST', body: JSON.stringify(dados) }),
   },
 
   restaurantes: {
