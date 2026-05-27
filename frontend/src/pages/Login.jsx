@@ -223,6 +223,13 @@ export default function Login() {
   const config      = getConfig({ eParceiro, eEntregador, eOperador })
   const perfilLogin = eOperador ? 'operador' : eEntregador ? 'entregador' : eParceiro ? 'gerente' : 'cliente'
 
+  useEffect(() => {
+    const authError = sessionStorage.getItem('authError')
+    if (!authError) return
+    sessionStorage.removeItem('authError')
+    setErro(authError)
+  }, [])
+
   const handleEnviar = async (e) => {
     e.preventDefault()
     setCarregando(true)

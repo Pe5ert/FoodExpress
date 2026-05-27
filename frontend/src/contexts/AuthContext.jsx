@@ -99,7 +99,12 @@ export function AuthProvider({ children }) {
           }),
         });
 
-        if (!response.ok) throw new Error('Falha ao sincronizar sessão no backend');
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          const erro = new Error(data?.erro || 'Falha ao sincronizar sessão no backend');
+          erro.status = response.status;
+          throw erro;
+        }
 
         const data = await response.json();
         if (data?.token) {
@@ -123,10 +128,17 @@ export function AuthProvider({ children }) {
             ? atual
             : usuarioCliente
         ));
-      } catch {
+      } catch (error) {
         localStorage.removeItem('usuario');
         localStorage.removeItem('token');
         setUsuario(null);
+        if (error?.status === 409) {
+          sessionStorage.setItem(
+            'authError',
+            `${error.message} Use o login correto com e-mail e senha.`
+          );
+          navigate('/login', { replace: true });
+        }
       } finally {
         ultimaContaAuth0Sincronizada.current = chaveContaAuth0;
         setAuth0Sincronizado(true);
@@ -134,7 +146,7 @@ export function AuthProvider({ children }) {
     };
 
     sincronizarAuth0();
-  }, [auth0Configurado, auth0Loading, isAuthenticated, auth0Sub, auth0Email, auth0Name]);
+  }, [auth0Configurado, auth0Loading, isAuthenticated, auth0Sub, auth0Email, auth0Name, navigate]);
 
   const entrar = async (email, perfil, extras = {}) => {
     const novoUsuario = {

@@ -475,6 +475,7 @@ router.post('/session', async (req, res) => {
 // ── POST /api/auth/auth0-sync ─────────────────────────────────────────────────
 router.post('/auth0-sync', async (req, res) => {
   try {
+    await ensureDatabaseHealth();
     const { email, nome } = req.body;
     if (!email) return res.status(400).json({ erro: 'E-mail obrigatório' });
 
