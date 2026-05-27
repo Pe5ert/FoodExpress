@@ -7,6 +7,17 @@ import { buscarRestauranteDoUsuario, ensureDatabaseHealth } from '../lib/schema'
 
 const router = Router()
 
+type TipoCupom = 'percentual' | 'fixo' | 'frete_gratis'
+
+const CUPONS_ESTATICOS: Record<string, { desconto: number; tipo: TipoCupom; minimo: number; data_expiracao?: string | null }> = {
+  DESC10: { desconto: 10, tipo: 'percentual', minimo: 30 },
+  DESC20: { desconto: 20, tipo: 'percentual', minimo: 50 },
+  DESC5REAIS: { desconto: 5, tipo: 'fixo', minimo: 25 },
+  PRIMEIRA_VEZ: { desconto: 15, tipo: 'percentual', minimo: 0 },
+  FRETEGRATIS: { desconto: 0, tipo: 'frete_gratis', minimo: 0 },
+  OFERTA30: { desconto: 30, tipo: 'percentual', minimo: 0 },
+}
+
 function calcularDistancia(lat1: number, lon1: number, lat2: number, lon2: number): number {
   if (![lat1, lon1, lat2, lon2].every(Number.isFinite)) return Number.POSITIVE_INFINITY
   if ((lat1 === 0 && lon1 === 0) || (lat2 === 0 && lon2 === 0)) return Number.POSITIVE_INFINITY
@@ -77,6 +88,36 @@ function calcularGanhoEntregador(taxaEntrega: number, total: number, distanciaKm
     return Number(porDistancia.toFixed(2))
   }
   return Number(Math.max(5, total * 0.12).toFixed(2))
+}
+
+async function calcularDescontoDoCupom(codigoInformado: any, subtotal: number, taxaEntrega: number) {
+  const codigo = String(codigoInformado || '').trim().toUpperCase()
+  if (!codigo) return 0
+
+  const dbCupom = await db.execute({
+    sql: 'SELECT * FROM cupons WHERE codigo = ? AND ativo = 1',
+    args: [codigo],
+  }).catch(() => null)
+
+  const cupomDb = dbCupom?.rows?.[0] as any
+  const cupom = cupomDb
+    ? {
+        desconto: Number(cupomDb.desconto || 0),
+        tipo: String(cupomDb.tipo || 'percentual') as TipoCupom,
+        minimo: Number(cupomDb.minimo || 0),
+        data_expiracao: cupomDb.data_expiracao || null,
+      }
+    : CUPONS_ESTATICOS[codigo]
+
+  if (!cupom) throw new Error('Cupom inválido')
+  if (subtotal < Number(cupom.minimo || 0)) throw new Error(`Valor mínimo do cupom é R$ ${Number(cupom.minimo || 0).toFixed(2)}`)
+  if (cupom.data_expiracao && new Date(cupom.data_expiracao).getTime() < Date.now()) throw new Error('Cupom expirado')
+
+  let desconto = 0
+  if (cupom.tipo === 'percentual') desconto = subtotal * (Number(cupom.desconto || 0) / 100)
+  if (cupom.tipo === 'fixo') desconto = Number(cupom.desconto || 0)
+  if (cupom.tipo === 'frete_gratis') desconto = Number(taxaEntrega || 0)
+  return Number(Math.max(0, Math.min(desconto, subtotal + taxaEntrega)).toFixed(2))
 }
 
 // GET /api/pedidos
@@ -198,6 +239,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
       forma_pagamento = 'cartao',
       taxa_entrega: taxaEntregaInformada,
       desconto: descontoInformado,
+      cupom_codigo,
       troco: trocoInformado = 0,
     } = req.body
     const role = String(req.userRole || '').toLowerCase()
@@ -231,15 +273,21 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
       Number(restaurante.rows[0].latitude), Number(restaurante.rows[0].longitude),
       Number(latitude || 0), Number(longitude || 0)
     )
-    const taxaCalculada = dist > 5 ? 12 : dist > 3 ? 8 : 5
+    const taxaCalculada = subtotal >= 50 ? 0 : 5.99
     const taxaInformada = Number(taxaEntregaInformada)
-    const taxa_entrega = Number.isFinite(taxaInformada) && taxaInformada >= 0
+    const taxa_entrega = ehOperador(req) && Number.isFinite(taxaInformada) && taxaInformada >= 0
       ? Number(taxaInformada.toFixed(2))
       : taxaCalculada
     const descontoSolicitado = Number(descontoInformado || 0)
-    const desconto = Number.isFinite(descontoSolicitado)
-      ? Math.max(0, Math.min(descontoSolicitado, subtotal + taxa_entrega))
-      : 0
+    let desconto = 0
+    try {
+      desconto = await calcularDescontoDoCupom(cupom_codigo, subtotal, taxa_entrega)
+    } catch (cupomErro: any) {
+      return res.status(400).json({ erro: cupomErro.message || 'Cupom inválido' }) as any
+    }
+    if (ehOperador(req) && !cupom_codigo && Number.isFinite(descontoSolicitado)) {
+      desconto = Math.max(0, Math.min(descontoSolicitado, subtotal + taxa_entrega))
+    }
     const total = Number(Math.max(0, subtotal + taxa_entrega - desconto).toFixed(2))
     const ganho_entregador = calcularGanhoEntregador(taxa_entrega, total, dist)
 
@@ -477,6 +525,16 @@ router.post('/:id/atribuir-entregador-automatico', requireAuth, async (req: Auth
     })
     if (!pedido.rows.length) return res.status(404).json({ erro: 'Pedido não encontrado' }) as any
     const p = pedido.rows[0] as any
+    const role = String(req.userRole || '').toLowerCase()
+    if (!ehOperador(req)) {
+      if (!['gerente', 'restaurante'].includes(role)) {
+        return res.status(403).json({ erro: 'Apenas o restaurante pode solicitar atribuição automática.' }) as any
+      }
+      const rest = await restauranteDoUsuario(req)
+      if (!rest?.id || String(rest.id) !== String(p.restaurante_id)) {
+        return res.status(403).json({ erro: 'Você não pode atribuir entregador para este pedido.' }) as any
+      }
+    }
     if (p.entregador_id) return res.status(400).json({ erro: 'Pedido já tem entregador atribuído' }) as any
 
     const disponiveis = await db.execute({

@@ -1,6 +1,8 @@
 // @ts-nocheck
 import { db } from './db'
 import { hashSenha } from './password'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 
 let schemaPromise: Promise<void> | null = null
 
@@ -26,11 +28,47 @@ function idEstavel(valor: string) {
     .slice(0, 48) || 'principal'
 }
 
+async function aplicarSchemaBase() {
+  const candidatePaths = [
+    join(process.cwd(), '../database/schema.sql'),
+    join(process.cwd(), 'database/schema.sql'),
+    join(process.cwd(), '../schema.sql'),
+    join(process.cwd(), 'schema.sql'),
+  ]
+
+  let schema = ''
+  for (const path of candidatePaths) {
+    try {
+      schema = readFileSync(path, 'utf-8')
+      break
+    } catch {}
+  }
+  if (!schema) return
+
+  const statements = schema
+    .split(';')
+    .map(s => s.replace(/--[^\n]*/g, '').trim())
+    .filter(s => s.length > 10)
+
+  for (const stmt of statements) {
+    try {
+      await db.execute(stmt)
+    } catch (e: any) {
+      const message = String(e?.message || '').toLowerCase()
+      if (!message.includes('already exists') && !message.includes('duplicate')) {
+        throw e
+      }
+    }
+  }
+}
+
 export async function ensureDatabaseHealth() {
   if (schemaPromise) return schemaPromise
 
   schemaPromise = (async () => {
     try {
+      await aplicarSchemaBase()
+
       await ensureColumn('restaurantes', 'user_id', 'TEXT')
       await ensureColumn('restaurantes', 'horario_abertura', 'TEXT')
       await ensureColumn('restaurantes', 'horario_fechamento', 'TEXT')

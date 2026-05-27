@@ -45,6 +45,9 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     if (!pedido.rows.length) return res.status(404).json({ erro: 'Pedido não encontrado' }) as any
 
     const p = pedido.rows[0] as any
+    if (String(req.userRole || '').toLowerCase() !== 'cliente' || String(p.cliente_id || '') !== String(req.userId || '')) {
+      return res.status(403).json({ erro: 'Você só pode avaliar seus próprios pedidos.' }) as any
+    }
     if (p.status !== 'entregue') {
       return res.status(400).json({ erro: 'Você poderá avaliar este pedido após a entrega.' }) as any
     }

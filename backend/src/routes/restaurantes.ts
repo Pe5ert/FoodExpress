@@ -270,7 +270,12 @@ router.get('/:id', async (req, res: Response) => {
     const id = String(req.params.id)
     const result = await db.execute({ sql: 'SELECT * FROM restaurantes WHERE id = ?', args: [id] })
     if (!result.rows.length) return res.status(404).json({ erro: 'Restaurante não encontrado' }) as any
-    res.json(result.rows[0])
+    const restaurante = result.rows[0] as any
+    const status = String(restaurante.status || 'ativo').toLowerCase()
+    if (!['ativo', 'fechado'].includes(status)) {
+      return res.status(404).json({ erro: 'Restaurante não encontrado' }) as any
+    }
+    res.json(restaurante)
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao buscar restaurante' })
   }

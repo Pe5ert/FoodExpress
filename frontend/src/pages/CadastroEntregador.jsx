@@ -63,8 +63,8 @@ export default function CadastroEntregador() {
 
   const handlePasso1 = (e) => {
     e.preventDefault()
-    if (!dados.nome.trim() || !dados.telefone.trim() || !dados.senha.trim()) {
-      setErro('Preencha nome, telefone e senha para continuar.')
+    if (!dados.nome.trim() || !dados.telefone.trim() || !dados.email.trim() || !dados.senha.trim()) {
+      setErro('Preencha nome, telefone, e-mail e senha para continuar.')
       return
     }
     if (dados.senha.length < 6) {
@@ -85,7 +85,7 @@ export default function CadastroEntregador() {
     setErro('')
     setCarregando(true)
     try {
-      const emailAuto = dados.email.trim() || `${dados.telefone.replace(/\D/g, '')}@entregador.local`
+      const emailAuto = dados.email.trim()
       await entrar(emailAuto, 'entregador', {
         nome: dados.nome,
         telefone: dados.telefone,
@@ -207,11 +207,11 @@ export default function CadastroEntregador() {
               </Motion.div>
 
               <Motion.div className="flex flex-col gap-1.5" variants={itemVariants} initial="hidden" animate="show" transition={{ delay: 0.16 }}>
-                <label className={labelClass}>E-mail (opcional)</label>
+                <label className={labelClass}>E-mail *</label>
                 <div className="relative">
                   <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
                   <input name="email" type="email" placeholder="seu@email.com"
-                    value={dados.email} onChange={handleChange} className={inputClass} />
+                    value={dados.email} onChange={handleChange} required className={inputClass} />
                 </div>
               </Motion.div>
 

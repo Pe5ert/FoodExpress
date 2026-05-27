@@ -1,5 +1,6 @@
 // @ts-nocheck
-import { Router, Request, Response } from 'express'
+import { Router, Response } from 'express'
+import { requireAuth, AuthRequest } from '../middleware/auth'
 
 const router = Router()
 
@@ -71,8 +72,12 @@ const formatarEndereco = (endereco: any) => {
   ].filter(Boolean).join(', ')
 }
 
-router.get('/consulta', async (req: Request, res: Response) => {
+router.get('/consulta', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
+    const role = String(req.userRole || '').toLowerCase()
+    if (!['gerente', 'restaurante', 'operador'].includes(role)) {
+      return res.status(403).json({ erro: 'Apenas parceiros podem consultar CNPJ.' })
+    }
     const cnpj = String(req.query.cnpj || '').replace(/[^\d]/g, '')
     if (!cnpj || cnpj.length !== 14) {
       return res.status(400).json({ erro: 'CNPJ inválido' })

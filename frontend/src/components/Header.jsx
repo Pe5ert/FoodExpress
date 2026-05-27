@@ -59,7 +59,13 @@ export default function Header() {
 
   const logado = estaLogado
   const perfil = usuario?.perfil || null
-  const rotaPerfil = perfil === 'gerente' ? '/gerente' : '/perfil'
+  const rotaPerfil = perfil === 'gerente' || perfil === 'operador'
+    ? '/gerente'
+    : perfil === 'entregador'
+      ? '/entregador'
+      : perfil === 'restaurante'
+        ? '/painel-restaurante'
+        : '/perfil'
   const total = totalCarrinho || 0
   const qtd = quantidadeTotal || 0
   const ativo = (path) => location.pathname === path

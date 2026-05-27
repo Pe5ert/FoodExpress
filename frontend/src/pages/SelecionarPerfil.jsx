@@ -1,10 +1,8 @@
 import { useState } from 'react'
 import { motion as Motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
 import { User, Bike, UtensilsCrossed, BarChart3, ArrowRight } from 'lucide-react'
 import logoSrc from '../imgs/Logo-site.png'
-import api from '../services/api'
 
 const roles = [
   { id: 'cliente',     nome: 'Cliente',      descricao: 'Faça pedidos e acompanhe suas entregas',      Icon: User,            rota: '/' },
@@ -19,7 +17,6 @@ const itemVariants = {
 }
 
 export default function SelecionarPerfil() {
-  const { usuario, entrar } = useAuth()
   const navigate = useNavigate()
   const [selecionado, setSelecionado] = useState('')
   const [carregando, setCarregando] = useState(false)
@@ -29,19 +26,21 @@ export default function SelecionarPerfil() {
   const continuar = async () => {
     if (!roleSelecionada) return
     setCarregando(true)
-    const email = usuario?.email || ''
-    const nome = usuario?.nome || email.split('@')[0] || 'Usuário'
-
-    try {
-      // Cria o registro no banco para restaurante/entregador se ainda não existir
-      if (selecionado === 'restaurante') {
-        await api.restaurantes.cadastroInicial({ email, nome }).catch(() => {})
-      } else if (selecionado === 'entregador') {
-        await api.entregadores.cadastrarInicial({ email, nome }).catch(() => {})
-      }
-    } catch {}
-
-    entrar(email, selecionado)
+    if (selecionado === 'cliente') {
+      navigate('/')
+      return
+    }
+    if (selecionado === 'restaurante') {
+      navigate('/register/store')
+      return
+    }
+    if (selecionado === 'entregador') {
+      navigate('/register/entregador')
+      return
+    }
+    if (selecionado === 'gerente') {
+      navigate('/login?parceiro=true')
+    }
   }
 
   return (
@@ -55,7 +54,7 @@ export default function SelecionarPerfil() {
       >
         <img src={logoSrc} alt="FoodExpress" className="h-10 mx-auto mb-3" />
         <p className="text-white/70 font-semibold text-sm">
-          Olá{usuario?.nome ? `, ${usuario.nome.split(' ')[0]}` : ''}! Como você vai usar a plataforma?
+          Como você vai usar a plataforma?
         </p>
       </Motion.div>
 
