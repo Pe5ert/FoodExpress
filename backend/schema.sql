@@ -91,7 +91,6 @@ CREATE TABLE clientes (
     latitude REAL,
     longitude REAL,
     senha_hash TEXT,
-    deletado_em DATETIME,
     total_pedidos INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -125,7 +124,6 @@ CREATE TABLE pedidos (
     subtotal REAL NOT NULL,
     taxa_entrega REAL NOT NULL,
     desconto REAL DEFAULT 0,
-    troco REAL DEFAULT 0,
     total REAL NOT NULL,
     forma_pagamento TEXT NOT NULL,
     pagamento_status TEXT DEFAULT 'pendente',
@@ -147,9 +145,6 @@ CREATE TABLE pedidos (
     avaliacao_restaurante INTEGER,
     avaliacao_entregador INTEGER,
     comentario TEXT,
-    ganho_entregador REAL DEFAULT 0,
-    repasse_entregador_status TEXT DEFAULT 'pendente',
-    repasse_entregador_em DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (cliente_id) REFERENCES clientes(id),
@@ -206,40 +201,10 @@ CREATE TABLE tickets (
     pedido_id TEXT,
     status TEXT DEFAULT 'aberto',
     prioridade TEXT DEFAULT 'normal',
-    resposta TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (cliente_id) REFERENCES clientes(id),
     FOREIGN KEY (pedido_id) REFERENCES pedidos(id)
-);
-
--- Tabela de avaliações
-CREATE TABLE IF NOT EXISTS avaliacoes (
-    id TEXT PRIMARY KEY,
-    cliente_id TEXT NOT NULL,
-    pedido_id TEXT,
-    restaurante_id TEXT,
-    entregador_id TEXT,
-    estrelas INTEGER NOT NULL,
-    comentario TEXT,
-    tipo TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (cliente_id) REFERENCES clientes(id),
-    FOREIGN KEY (pedido_id) REFERENCES pedidos(id),
-    FOREIGN KEY (restaurante_id) REFERENCES restaurantes(id),
-    FOREIGN KEY (entregador_id) REFERENCES entregadores(id)
-);
-
--- Tabela de cupons
-CREATE TABLE IF NOT EXISTS cupons (
-    id TEXT PRIMARY KEY,
-    codigo TEXT UNIQUE NOT NULL,
-    desconto REAL NOT NULL,
-    tipo TEXT NOT NULL,
-    minimo REAL DEFAULT 0,
-    data_expiracao DATETIME,
-    ativo INTEGER DEFAULT 1,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Tabela de denúncias de produtos
@@ -281,10 +246,6 @@ CREATE INDEX idx_pedidos_created ON pedidos(created_at);
 CREATE INDEX idx_disputas_status ON disputas(status);
 CREATE INDEX idx_disputas_pedido ON disputas(pedido_id);
 CREATE INDEX idx_disputas_criador ON disputas(criador_id);
-CREATE INDEX IF NOT EXISTS idx_avaliacoes_restaurante ON avaliacoes(restaurante_id);
-CREATE INDEX IF NOT EXISTS idx_avaliacoes_entregador ON avaliacoes(entregador_id);
-CREATE INDEX IF NOT EXISTS idx_avaliacoes_pedido ON avaliacoes(pedido_id);
-CREATE INDEX IF NOT EXISTS idx_cupons_codigo ON cupons(codigo);
 CREATE INDEX IF NOT EXISTS idx_denuncias_produtos_restaurante ON denuncias_produtos(restaurante_id);
 CREATE INDEX IF NOT EXISTS idx_denuncias_produtos_status ON denuncias_produtos(status);
 CREATE INDEX IF NOT EXISTS idx_denuncias_produtos_cliente ON denuncias_produtos(cliente_id);
