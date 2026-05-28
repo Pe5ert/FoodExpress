@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion as Motion, AnimatePresence, useScroll, useMotionValueEvent } from 'framer-motion'
-import { Star, Clock, Truck, Search, ArrowLeft, Plus, Minus, X, ShoppingBag, Users, MapPin, CreditCard, Calendar, ChevronDown, CheckCircle } from 'lucide-react'
+import { Star, Clock, Truck, Search, ArrowLeft, Plus, Minus, X, ShoppingBag, Users, MapPin, CreditCard, Calendar, ChevronDown, CheckCircle, Flag, Send } from 'lucide-react'
 import MobileNavBar from '../components/MobileNavBar'
 import CartDrawer from '../components/GavetaCarrinho'
 import { useCart } from '../contexts/CartContext'
@@ -15,10 +15,20 @@ function ProdutoModal({ produto, loja, onClose, onItemAdded }) {
   const [selecionados, setSelecionados] = useState({})
   const [comentario, setComentario] = useState('')
   const [denunciaRegistrada, setDenunciaRegistrada] = useState(false)
+  const [denunciaAberta, setDenunciaAberta] = useState(false)
+  const [motivoDenuncia, setMotivoDenuncia] = useState('')
+  const [detalheDenuncia, setDetalheDenuncia] = useState('')
   const imagemRef = useRef(null)
   const { adicionarItem } = useCart()
 
   const MAX_COMENTARIO = 140
+  const motivosDenuncia = [
+    'Foto ou descrição enganosa',
+    'Preço incorreto',
+    'Produto impróprio',
+    'Item duplicado',
+    'Outro problema',
+  ]
 
   const handleOpcao = (tituloOpcional, opcaoId, max) => {
     setSelecionados(prev => {
@@ -207,23 +217,83 @@ function ProdutoModal({ produto, loja, onClose, onItemAdded }) {
                   />
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setDenunciaRegistrada(true)}
-                  className="text-sm font-bold text-primary hover:underline cursor-pointer bg-transparent border-none mb-2"
-                >
-                  Denunciar item
-                </button>
+                <div className="mt-3 rounded-2xl border border-border bg-surface-2 p-3">
+                  {!denunciaAberta && !denunciaRegistrada && (
+                    <button
+                      type="button"
+                      onClick={() => setDenunciaAberta(true)}
+                      className="flex w-full items-center justify-between gap-3 text-left bg-transparent border-none cursor-pointer"
+                    >
+                      <span className="flex items-center gap-2 text-sm font-extrabold text-text-primary">
+                        <Flag size={15} className="text-primary" />
+                        Denunciar este item
+                      </span>
+                      <span className="text-xs font-bold text-text-muted">Produto errado?</span>
+                    </button>
+                  )}
 
-                {denunciaRegistrada && (
-                  <div className="mt-2 rounded-xl border border-primary/20 bg-primary-light px-3 py-3">
-                    <p className="text-xs font-extrabold uppercase tracking-wide text-primary mb-1">Denúncia registrada</p>
-                    <p className="text-sm font-bold text-text-primary">{produto.nome}</p>
-                    <p className="text-xs font-semibold text-text-muted mt-1">
-                      A equipe vai revisar este produto em {loja.nome}.
-                    </p>
-                  </div>
-                )}
+                  {denunciaAberta && !denunciaRegistrada && (
+                    <div>
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div>
+                          <p className="text-sm font-extrabold text-text-primary">Qual o problema?</p>
+                          <p className="text-xs font-semibold text-text-muted">Produto: <span className="text-text-primary">{produto.nome}</span></p>
+                        </div>
+                        <button type="button" onClick={() => setDenunciaAberta(false)}
+                          className="w-8 h-8 rounded-full border border-border bg-white flex items-center justify-center text-text-muted hover:text-text-primary hover:bg-surface-2">
+                          <X size={14} />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                        {motivosDenuncia.map((motivo) => (
+                          <button
+                            key={motivo}
+                            type="button"
+                            onClick={() => setMotivoDenuncia(motivo)}
+                            className={`rounded-xl border px-3 py-2 text-left text-xs font-bold transition-all ${
+                              motivoDenuncia === motivo
+                                ? 'border-primary bg-primary-light text-primary'
+                                : 'border-border bg-white text-text-secondary hover:border-primary hover:text-primary'
+                            }`}
+                          >
+                            {motivo}
+                          </button>
+                        ))}
+                      </div>
+                      <textarea
+                        value={detalheDenuncia}
+                        onChange={(e) => setDetalheDenuncia(e.target.value.slice(0, 180))}
+                        placeholder="Conte rapidamente o que aconteceu"
+                        rows={3}
+                        className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm font-semibold text-text-primary outline-none resize-none focus:border-primary placeholder:text-text-muted"
+                      />
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <span className="text-xs font-semibold text-text-muted">{detalheDenuncia.length}/180</span>
+                        <button
+                          type="button"
+                          disabled={!motivoDenuncia}
+                          onClick={() => {
+                            setDenunciaRegistrada(true)
+                            setDenunciaAberta(false)
+                          }}
+                          className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-extrabold text-white border-none disabled:bg-border disabled:text-text-muted disabled:cursor-not-allowed"
+                        >
+                          <Send size={13} /> Enviar denúncia
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {denunciaRegistrada && (
+                    <div className="rounded-xl border border-accent/20 bg-accent/10 px-3 py-3">
+                      <p className="text-xs font-extrabold uppercase tracking-wide text-accent mb-1">Denúncia registrada</p>
+                      <p className="text-sm font-bold text-text-primary">{produto.nome}</p>
+                      <p className="text-xs font-semibold text-text-muted mt-1">
+                        Motivo: {motivoDenuncia}. A equipe vai revisar este item em {loja.nome}.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -260,36 +330,37 @@ function ProdutoModal({ produto, loja, onClose, onItemAdded }) {
 function ProdutoCard({ produto, onAbrir, index }) {
   return (
     <Motion.div
-      className="flex items-center gap-4 py-4 border-b border-border last:border-none cursor-pointer group"
+      className="flex items-stretch gap-4 rounded-2xl border border-transparent px-3 py-3 cursor-pointer group transition-all hover:border-border hover:bg-white hover:shadow-sm"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.04, ease: 'easeOut' }}
       onClick={() => onAbrir(produto)}
     >
-      <div className="flex-1 min-w-0">
-        <h4 className="font-semibold text-sm text-text-primary mb-1 group-hover:text-primary transition-colors leading-snug">{produto.nome}</h4>
+      <div className="flex-1 min-w-0 py-1">
+        <h4 className="font-display font-extrabold text-base text-text-primary mb-1 group-hover:text-primary transition-colors leading-snug">{produto.nome}</h4>
         {produto.serve && (
           <div className="flex items-center gap-1 text-xs text-text-muted font-semibold mb-1.5">
             <Users size={11} /> Serve {produto.serve} pessoas
           </div>
         )}
         {produto.desc && (
-          <p className="text-xs text-text-secondary font-medium leading-relaxed line-clamp-2 mb-2">{produto.desc}</p>
+          <p className="text-sm text-text-secondary font-medium leading-relaxed line-clamp-2 mb-3">{produto.desc}</p>
         )}
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-extrabold text-accent">R$ {produto.preco.toFixed(2).replace('.', ',')}</span>
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-display text-base font-extrabold text-accent">R$ {produto.preco.toFixed(2).replace('.', ',')}</span>
           {produto.precoAnterior && (
             <span className="text-xs text-text-muted line-through font-semibold">R$ {produto.precoAnterior.toFixed(2).replace('.', ',')}</span>
           )}
         </div>
       </div>
       <Motion.div
-        className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl flex items-center justify-center text-4xl shrink-0 bg-gradient-to-br from-orange-50 to-orange-100 relative overflow-hidden"
-        whileHover={{ scale: 1.05 }}
+        className="w-32 h-32 sm:w-40 sm:h-32 rounded-2xl flex items-center justify-center text-5xl shrink-0 bg-gradient-to-br from-orange-50 to-orange-100 relative overflow-hidden border border-border/60"
+        whileHover={{ scale: 1.03 }}
       >
         {produto.imagem ? <img src={produto.imagem} alt={produto.nome} className="absolute inset-0 w-full h-full object-cover" loading="lazy" /> : produto.emoji}
-        <div className="absolute bottom-1.5 right-1.5 w-6 h-6 bg-primary rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all">
-          <Plus size={13} className="text-white" />
+        <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/45 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="absolute bottom-2 right-2 w-8 h-8 bg-primary rounded-full flex items-center justify-center opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all shadow-lg">
+          <Plus size={16} className="text-white" />
         </div>
       </Motion.div>
     </Motion.div>
