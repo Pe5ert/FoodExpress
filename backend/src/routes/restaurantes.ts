@@ -3,7 +3,7 @@ import { Router, Response } from 'express'
 import { db } from '../lib/db'
 import { validarCNPJ } from '../lib/validacoes'
 import { requireAuth, AuthRequest } from '../middleware/auth'
-import { ensureDatabaseHealth, buscarRestauranteDoUsuario, vincularRestauranteAoUsuario } from '../lib/schema'
+import { buscarRestauranteDoUsuario, vincularRestauranteAoUsuario } from '../lib/schema'
 import { hashSenha } from '../lib/password'
 
 const router = Router()
@@ -59,7 +59,6 @@ async function podeGerenciarRestaurante(req: AuthRequest, restauranteId: string)
 // GET /api/restaurantes — listar com filtros públicos
 router.get('/', async (req, res: Response) => {
   try {
-    await ensureDatabaseHealth()
     const { categoria, ordenar, limite = '50', latitude, longitude } = req.query
     const clienteLat = Number(latitude)
     const clienteLng = Number(longitude)
@@ -153,7 +152,6 @@ router.get('/meu', requireAuth, async (req: AuthRequest, res: Response) => {
 // POST /api/restaurantes/cadastro — cria registro inicial ao selecionar role
 router.post('/cadastro', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    await ensureDatabaseHealth()
     const userId = req.userId!
     const {
       email,
@@ -233,7 +231,6 @@ router.post('/cadastro', requireAuth, async (req: AuthRequest, res: Response) =>
 router.get('/pendentes', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     if (!ehOperador(req)) return res.status(403).json({ erro: 'Apenas operadores podem aprovar restaurantes' }) as any
-    await ensureDatabaseHealth()
     const result = await db.execute({
       sql: `SELECT r.*,
                    COUNT(c.id) as total_itens_cardapio
@@ -254,7 +251,6 @@ router.get('/pendentes', requireAuth, async (req: AuthRequest, res: Response) =>
 // GET /api/restaurantes/cadastro — compatibilidade: busca por email ou pelo token se enviado
 router.get('/cadastro', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    await ensureDatabaseHealth()
     const email = String(req.query.email || '')
     if (!email) return res.status(400).json({ erro: 'Email obrigatório' }) as any
     if (!ehOperador(req) && String(req.userEmail || '').toLowerCase() !== email.toLowerCase()) {
@@ -273,7 +269,6 @@ router.get('/cadastro', requireAuth, async (req: AuthRequest, res: Response) => 
 // GET /api/restaurantes/:id — buscar por ID
 router.get('/:id', async (req, res: Response) => {
   try {
-    await ensureDatabaseHealth()
     const id = String(req.params.id)
     const result = await db.execute({ sql: 'SELECT * FROM restaurantes WHERE id = ?', args: [id] })
     if (!result.rows.length) return res.status(404).json({ erro: 'Restaurante não encontrado' }) as any
@@ -298,7 +293,6 @@ router.get('/:id', async (req, res: Response) => {
 // POST /api/restaurantes — criar cadastro completo
 router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    await ensureDatabaseHealth()
     const { nome, cnpj, email, telefone, endereco, categoria, latitude, longitude } = req.body
     if (!nome || !cnpj || !email || !endereco) return res.status(400).json({ erro: 'Campos obrigatórios faltando' }) as any
     if (!validarCNPJ(cnpj)) return res.status(400).json({ erro: 'CNPJ inválido' }) as any
@@ -340,7 +334,6 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
 // PUT /api/restaurantes/:id — atualizar dados da loja
 router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    await ensureDatabaseHealth()
     const id = String(req.params.id)
     if (!(await podeGerenciarRestaurante(req, id))) {
       return res.status(403).json({ erro: 'Você não pode alterar este restaurante' }) as any
@@ -420,7 +413,6 @@ router.delete('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 // POST /api/restaurantes/:id/aprovar — mantém compatibilidade com fluxo manual
 router.post('/:id/aprovar', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    await ensureDatabaseHealth()
     if (!ehOperador(req)) return res.status(403).json({ erro: 'Apenas operadores podem aprovar restaurantes' }) as any
     const { acao, motivo_rejeicao, taxa_comissao = 15 } = req.body
     if (!['aprovar', 'rejeitar'].includes(acao)) return res.status(400).json({ erro: 'Ação deve ser "aprovar" ou "rejeitar"' }) as any

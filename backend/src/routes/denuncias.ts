@@ -3,7 +3,7 @@ import { Router, Response } from 'express'
 import crypto from 'crypto'
 import { db } from '../lib/db'
 import { requireAuth, AuthRequest } from '../middleware/auth'
-import { buscarRestauranteDoUsuario, ensureDatabaseHealth } from '../lib/schema'
+import { buscarRestauranteDoUsuario } from '../lib/schema'
 
 const router = Router()
 
@@ -26,7 +26,6 @@ async function restauranteGerenciado(req: AuthRequest) {
 // POST /api/denuncias/produtos — cliente denuncia um item do cardápio
 router.post('/produtos', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    await ensureDatabaseHealth()
     const produtoId = limparTexto(req.body.produtoId || req.body.cardapioId, 80)
     const motivo = limparTexto(req.body.motivo, 120)
     const detalhe = limparTexto(req.body.detalhe, 500)
@@ -73,7 +72,6 @@ router.post('/produtos', requireAuth, async (req: AuthRequest, res: Response) =>
 // GET /api/denuncias/produtos — gerente vê as denúncias da própria loja; operador vê todas
 router.get('/produtos', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    await ensureDatabaseHealth()
     const status = limparTexto(req.query.status, 40)
     let sql = `SELECT d.*, r.nome AS restaurante_nome
                FROM denuncias_produtos d
@@ -110,7 +108,6 @@ router.get('/produtos', requireAuth, async (req: AuthRequest, res: Response) => 
 // PUT /api/denuncias/produtos/:id — gerente/operador atualiza status ou resposta
 router.put('/produtos/:id', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    await ensureDatabaseHealth()
     const id = limparTexto(req.params.id, 80)
     const status = limparTexto(req.body.status, 40)
     const resposta = limparTexto(req.body.resposta, 500)

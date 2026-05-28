@@ -2,7 +2,7 @@
 import { Router, Response } from 'express'
 import { db } from '../lib/db'
 import { requireAuth, AuthRequest } from '../middleware/auth'
-import { buscarRestauranteDoUsuario, ensureDatabaseHealth } from '../lib/schema'
+import { buscarRestauranteDoUsuario } from '../lib/schema'
 
 const router = Router()
 const BR_OFFSET_HORAS = 3 // Turso/SQLite salva CURRENT_TIMESTAMP em UTC; Fortaleza/Brasil = UTC-3.
@@ -82,7 +82,6 @@ function normalizarTipoRelatorio(valor: any) {
 
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    await ensureDatabaseHealth()
     const tipo = normalizarTipoRelatorio(req.query.tipo)
     const dataInicio = normalizarDataInicio(String(req.query.inicio || ''))
     const dataFim = normalizarDataFim(String(req.query.fim || ''))
@@ -122,7 +121,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
           [dataInicio, dataFim, ...fp.args]
         )
         const porDia = await query(
-          `SELECT date(datetime(p.created_at, '-${BR_OFFSET_HORAS} hours')) as dia,
+          `SELECT DATE(DATE_SUB(p.created_at, INTERVAL ${BR_OFFSET_HORAS} HOUR)) as dia,
                   COUNT(*) as pedidos,
                   COALESCE(SUM(p.total),0) as faturamento,
                   COALESCE(AVG(p.total),0) as ticket_medio
@@ -223,7 +222,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 
       case 'mapa-calor': {
         const porHora = await query(
-          `SELECT strftime('%H', datetime(p.created_at, '-${BR_OFFSET_HORAS} hours')) as hora,
+          `SELECT DATE_FORMAT(DATE_SUB(p.created_at, INTERVAL ${BR_OFFSET_HORAS} HOUR), '%H') as hora,
                   COUNT(*) as quantidade,
                   COALESCE(SUM(p.total),0) as valor,
                   COALESCE(AVG(p.total),0) as ticket_medio
@@ -232,9 +231,9 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
           [dataInicio, dataFim, ...fp.args]
         )
         const porDiaSemana = await query(
-          `SELECT CASE strftime('%w', datetime(p.created_at, '-${BR_OFFSET_HORAS} hours'))
-                    WHEN '0' THEN 'Domingo' WHEN '1' THEN 'Segunda' WHEN '2' THEN 'Terça'
-                    WHEN '3' THEN 'Quarta' WHEN '4' THEN 'Quinta' WHEN '5' THEN 'Sexta' ELSE 'Sábado' END as dia_semana,
+          `SELECT CASE DAYOFWEEK(DATE_SUB(p.created_at, INTERVAL ${BR_OFFSET_HORAS} HOUR))
+                    WHEN 1 THEN 'Domingo' WHEN 2 THEN 'Segunda' WHEN 3 THEN 'Terça'
+                    WHEN 4 THEN 'Quarta' WHEN 5 THEN 'Quinta' WHEN 6 THEN 'Sexta' ELSE 'Sábado' END as dia_semana,
                   COUNT(*) as quantidade,
                   COALESCE(SUM(p.total),0) as valor,
                   COALESCE(AVG(p.total),0) as ticket_medio
@@ -318,7 +317,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
           [dataInicio, dataFim, ...fp.args]
         ))[0] || {}
         const porDia = await query(
-          `SELECT date(datetime(p.created_at, '-${BR_OFFSET_HORAS} hours')) as dia,
+          `SELECT DATE(DATE_SUB(p.created_at, INTERVAL ${BR_OFFSET_HORAS} HOUR)) as dia,
                   COALESCE(SUM(p.total), 0) as faturamento,
                   COALESCE(SUM(p.total * r.taxa_comissao / 100), 0) as comissao,
                   COALESCE(SUM(p.total - (p.total * r.taxa_comissao / 100)), 0) as repasse

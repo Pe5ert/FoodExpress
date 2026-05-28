@@ -3,7 +3,7 @@ import { Router, Response } from 'express'
 import Stripe from 'stripe'
 import { db } from '../lib/db'
 import { requireAuth, AuthRequest } from '../middleware/auth'
-import { buscarRestauranteDoUsuario, ensureDatabaseHealth } from '../lib/schema'
+import { buscarRestauranteDoUsuario } from '../lib/schema'
 
 const router = Router()
 
@@ -123,7 +123,6 @@ async function calcularDescontoDoCupom(codigoInformado: any, subtotal: number, t
 // GET /api/pedidos
 router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    await ensureDatabaseHealth()
     const { status, clienteId, entregadorId } = req.query
     let { restauranteId } = req.query
 
@@ -174,7 +173,6 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
 // GET /api/pedidos/disponiveis — pedidos sem entregador para motoboy aceitar
 router.get('/disponiveis', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    await ensureDatabaseHealth()
     if (String(req.userRole || '').toLowerCase() !== 'entregador' && !ehOperador(req)) {
       return res.status(403).json({ erro: 'Apenas entregadores podem ver pedidos disponíveis' }) as any
     }
@@ -228,7 +226,6 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
 // POST /api/pedidos
 router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    await ensureDatabaseHealth()
     const {
       clienteId,
       restauranteId,
