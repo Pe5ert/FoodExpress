@@ -5,7 +5,6 @@ import { db } from '../lib/db';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { enviarCodigoAcesso } from '../lib/email';
-import { ensureDatabaseHealth } from '../lib/schema';
 import { hashSenha, verificarSenha } from '../lib/password';
 
 const router = Router();
@@ -98,7 +97,7 @@ async function buscarUsuarioParaLogin(email: string, perfil: string) {
   }
 
   if (perfil === 'gerente' || perfil === 'restaurante') {
-    const gerente = await db.execute({ sql: 'SELECT id, user_id, nome, email, telefone, restaurante_id, senha_hash FROM gerentes WHERE lower(email) = ? AND COALESCE(status, "ativo") = "ativo" LIMIT 1', args: [emailLimpo] });
+    const gerente = await db.execute({ sql: "SELECT id, user_id, nome, email, telefone, restaurante_id, senha_hash FROM gerentes WHERE lower(email) = ? AND COALESCE(status, 'ativo') = 'ativo' LIMIT 1", args: [emailLimpo] });
     if (gerente.rows.length) {
       const row = gerente.rows[0] as any;
       return { id: row.user_id || row.id, nome: row.nome, email: row.email, telefone: row.telefone || '', restaurante_id: row.restaurante_id || '', senha_hash: row.senha_hash || '', perfil: 'gerente' };
@@ -115,7 +114,7 @@ async function buscarUsuarioParaLogin(email: string, perfil: string) {
   }
 
   if (perfil === 'operador') {
-    const result = await db.execute({ sql: 'SELECT id, user_id, nome, email, telefone, senha_hash FROM operadores WHERE lower(email) = ? AND COALESCE(status, "ativo") = "ativo" LIMIT 1', args: [emailLimpo] });
+    const result = await db.execute({ sql: "SELECT id, user_id, nome, email, telefone, senha_hash FROM operadores WHERE lower(email) = ? AND COALESCE(status, 'ativo') = 'ativo' LIMIT 1", args: [emailLimpo] });
     const row = result.rows[0] as any;
     return row ? { id: row.user_id || row.id, operador_id: row.id, nome: row.nome, email: row.email, telefone: row.telefone || '', senha_hash: row.senha_hash || '', perfil: 'operador' } : null;
   }
@@ -197,7 +196,6 @@ function respostaSessaoPerfil(usuario: any) {
 // Etapa 1: Salva email como pendente e envia código de confirmação
 router.post('/registrar', async (req, res) => {
   try {
-    await ensureDatabaseHealth();
     const { email, telefone, nome, senha, password } = req.body;
     if (!email) return res.status(400).json({ erro: 'E-mail obrigatório' });
     const telefoneLimpo = String(telefone || '').replace(/\D/g, '');
@@ -233,13 +231,12 @@ router.post('/registrar', async (req, res) => {
 // ── POST /api/auth/email/confirmar ───────────────────────────────────────────
 router.post('/email/confirmar', async (req, res) => {
   try {
-    await ensureDatabaseHealth();
     const { token, codigo } = req.body;
     if (!token || !codigo) return res.status(400).json({ erro: 'Token e código são obrigatórios' });
 
     const pending = await db.execute({
       sql: `SELECT * FROM usuarios_pendentes
-            WHERE token = ? AND tipo = 'email' AND usado = 0 AND expira_em > datetime('now')`,
+            WHERE token = ? AND tipo = 'email' AND usado = 0 AND expira_em > NOW()`,
       args: [token]
     });
     if (!pending.rows.length || !codigoConfere(pending.rows[0], codigo)) {
@@ -265,7 +262,6 @@ router.post('/email/confirmar', async (req, res) => {
 // ── POST /api/auth/login ─────────────────────────────────────────────────────
 router.post('/login', async (req, res) => {
   try {
-    await ensureDatabaseHealth();
     const { email, perfil = 'cliente' } = req.body;
     if (!email) return res.status(400).json({ erro: 'E-mail obrigatório' });
 
@@ -300,9 +296,16 @@ router.post('/login', async (req, res) => {
     const expira = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     await db.execute({
-      sql: `INSERT OR REPLACE INTO usuarios_pendentes 
+      sql: `INSERT INTO usuarios_pendentes 
             (id, email, nome, telefone, token, codigo, codigo_hash, tipo, expira_em, criado_em)
-            VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, CURRENT_TIMESTAMP)`,
+            VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON DUPLICATE KEY UPDATE
+              token = VALUES(token),
+              codigo_hash = VALUES(codigo_hash),
+              tipo = VALUES(tipo),
+              expira_em = VALUES(expira_em),
+              usado = 0,
+              criado_em = CURRENT_TIMESTAMP`,
       args: [`login_${crypto.randomUUID().slice(0,8)}`, emailLimpo, usuarioLogin.nome || '', usuarioLogin.telefone || '', tokenLogin, codigoHash, `login:${perfilNormalizado}`, expira]
     });
 
@@ -322,13 +325,12 @@ router.post('/login', async (req, res) => {
 // ── POST /api/auth/login/confirmar ───────────────────────────────────────────
 router.post('/login/confirmar', async (req, res) => {
   try {
-    await ensureDatabaseHealth();
     const { token, codigo } = req.body;
     if (!token || !codigo) return res.status(400).json({ erro: 'Token e código são obrigatórios' });
 
     const pending = await db.execute({
       sql: `SELECT * FROM usuarios_pendentes
-            WHERE token = ? AND tipo LIKE 'login%' AND usado = 0 AND expira_em > datetime('now')`,
+            WHERE token = ? AND tipo LIKE 'login%' AND usado = 0 AND expira_em > NOW()`,
       args: [token]
     });
     if (!pending.rows.length || !codigoConfere(pending.rows[0], codigo)) {
@@ -356,7 +358,6 @@ router.post('/login/confirmar', async (req, res) => {
 // Emite JWT no backend para fluxos locais/perfis internos sem expor JWT_SECRET no bundle.
 router.post('/session', async (req, res) => {
   try {
-    await ensureDatabaseHealth();
     const { email, nome, perfil, userId, cadastro = false, senha, password } = req.body;
     const emailLimpo = normalizarEmail(String(email || ''));
     const perfilNormalizado = String(perfil || 'cliente').toLowerCase().trim();
@@ -430,7 +431,6 @@ router.post('/session', async (req, res) => {
 // ── POST /api/auth/auth0-sync ─────────────────────────────────────────────────
 router.post('/auth0-sync', async (req, res) => {
   try {
-    await ensureDatabaseHealth();
     const { email, nome } = req.body;
     if (!email) return res.status(400).json({ erro: 'E-mail obrigatório' });
 
