@@ -16,8 +16,6 @@ const tiposCadastroEstabelecimento = [
 ]
 
 
-// aqui e o back gelado - tipos de estabelecimento devem ser carregados do backend ou CMS
-
 // ─── Campo fora do componente principal — OBRIGATÓRIO para não perder foco ───
 // Se ficar dentro, o React recria o componente a cada keystroke e desmonta o input
 const inputBase = "w-full pl-10 pr-4 py-3.5 border border-border rounded-xl text-sm font-semibold text-text-primary bg-surface-2 outline-none transition-all focus:border-secondary focus:bg-white focus:shadow-[0_0_0_3px_rgba(46,41,78,0.06)] placeholder:text-text-muted placeholder:font-normal"
@@ -262,7 +260,7 @@ export default function CadastroLoja() {
                 <label className="block text-xs font-extrabold text-text-secondary uppercase tracking-wide mb-1.5">
                   CNPJ *
                   {cnpjStatus === 'buscando' && (
-                    <span className="ml-2 text-text-muted font-semibold normal-case">Consultando gov.br...</span>
+                    <span className="ml-2 text-text-muted font-semibold normal-case">Consultando CNPJ...</span>
                   )}
                   {cnpjStatus === 'ok' && (
                     <span className="ml-2 text-accent font-semibold normal-case">✓ Empresa encontrada</span>
@@ -378,7 +376,7 @@ export default function CadastroLoja() {
                   Cadastrando...
                 </Motion.span>
               ) : (
-                <>Cadastrar estabelecimento <ChevronRight size={18} /></>
+                <>Cadastrar e configurar cardápio <ChevronRight size={18} /></>
               )}
             </Motion.button>
           </Motion.div>

@@ -233,6 +233,7 @@ export function AuthProvider({ children }) {
       nome: dados.nome || dados.name,
       email: dados.email,
       telefone: dados.telefone || dados.phone,
+      senha: dados.senha || dados.password,
     })
   };
 

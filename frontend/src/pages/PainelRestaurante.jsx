@@ -57,7 +57,7 @@ function NavbarRestaurante({ restaurante }) {
             <span className="text-white font-bold text-sm">{restaurante?.nome || 'Meu Restaurante'}</span>
             {restaurante?.status === 'ativo'
               ? <span className="ml-2 text-xs text-accent font-bold">● Ativo</span>
-              : <span className="ml-2 text-xs text-yellow-400 font-bold">⏳ Aguardando aprovação</span>}
+              : <span className="ml-2 text-xs text-yellow-400 font-bold">● Loja fechada</span>}
           </div>
         </div>
         <button onClick={sair} className="flex items-center gap-1.5 text-white/60 hover:text-white text-xs font-semibold transition-colors cursor-pointer bg-transparent border-none">
@@ -294,6 +294,7 @@ function AbaCardapio({ restauranteId }) {
         <div className="bg-white rounded-2xl border border-border p-12 text-center">
           <div className="text-5xl mb-3">🍽️</div>
           <p className="text-text-muted font-semibold">Nenhum item no cardápio ainda.</p>
+          <p className="text-xs text-text-muted font-semibold mt-2">Cadastre o primeiro produto para sua loja aparecer para os clientes.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -366,7 +367,7 @@ function AbaPerfil({ restaurante }) {
           </div>
         ))}
       </div>
-      <p className="text-xs text-text-muted mt-5">Para atualizar os dados, entre em contato com o operador.</p>
+      <p className="text-xs text-text-muted mt-5">Dados operacionais podem ser ajustados no painel. Para trocar CNPJ ou comissão, fale com o suporte.</p>
     </div>
   )
 }

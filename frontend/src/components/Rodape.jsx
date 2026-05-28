@@ -1,4 +1,4 @@
-import { Instagram, Facebook, Youtube, Twitter, Mail, Phone, MapPin, Store, LogIn, Bike, ShieldCheck, UserPlus } from 'lucide-react'
+import { Instagram, Facebook, Youtube, Twitter, Mail, Phone, MapPin, Store, LogIn, Bike, UserPlus } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import logoSrc from '../imgs/Logo-site.png'
 import { motion as Motion } from 'framer-motion'
@@ -106,11 +106,6 @@ export default function Rodape() {
               className="flex items-center gap-2.5 bg-white/8 hover:bg-white/15 text-white/80 hover:text-white border border-white/10 px-4 py-3 rounded-xl text-sm font-bold transition-all w-fit">
               <LogIn size={15} />
               Entrar como parceiro
-            </Link>
-            <Link to="/login?operador=true"
-              className="flex items-center gap-2.5 bg-white/8 hover:bg-white/15 text-white/80 hover:text-white border border-white/10 px-4 py-3 rounded-xl text-sm font-bold transition-all w-fit">
-              <ShieldCheck size={15} />
-              Entrar como operador
             </Link>
           </div>
         </Motion.div>

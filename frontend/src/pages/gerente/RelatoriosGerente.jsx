@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { motion as Motion } from 'framer-motion'
 import { BarChart2, Download, RefreshCw, AlertTriangle, TrendingUp } from 'lucide-react'
 import api from '../../services/api'
+import { useAuth } from '../../contexts/AuthContext'
 import { dataISOHojeLocal, formatarDataHoraBanco } from '../../utils/datas'
 
 const RELATORIOS = [
@@ -133,6 +134,7 @@ function Series({ series }) {
 }
 
 export default function RelatoriosGerente() {
+  const { usuario } = useAuth()
   const [tipoSelecionado, setTipoSelecionado] = useState('vendas')
   const [inicio, setInicio] = useState(dataISOHojeLocal(30))
   const [fim, setFim] = useState(dataISOHojeLocal(0))
@@ -143,6 +145,11 @@ export default function RelatoriosGerente() {
   const relatorioAtual = RELATORIOS.find(r => r.id === tipoSelecionado) || RELATORIOS[0]
   const dadosRelatorio = resultado?.dados || {}
   const detalhes = useMemo(() => linhasPrincipais(dadosRelatorio), [dadosRelatorio])
+  const ehOperador = usuario?.perfil === 'operador'
+  const tituloPagina = ehOperador ? 'Relatórios da plataforma' : 'Relatórios da loja'
+  const descricaoPagina = ehOperador
+    ? 'Visão global da operação para administração interna, suporte e acompanhamento financeiro.'
+    : 'Visão filtrada pela loja vinculada ao gerente logado: vendas, clientes, produtos, horários, entregas e financeiro.'
 
   const carregarRelatorio = async () => {
     setCarregando(true)
@@ -179,9 +186,9 @@ export default function RelatoriosGerente() {
       <div className="mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="font-display text-2xl font-extrabold text-text-primary">Relatórios Gerenciais</h1>
+            <h1 className="font-display text-2xl font-extrabold text-text-primary">{tituloPagina}</h1>
             <p className="text-sm text-text-muted font-semibold mt-1">
-              Relatórios filtrados pela loja vinculada ao gerente logado, com resumo, indicadores, séries e detalhes.
+              {descricaoPagina}
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
@@ -203,8 +210,8 @@ export default function RelatoriosGerente() {
           <p className="font-display text-3xl font-extrabold text-text-primary mt-2">12/12</p>
         </div>
         <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
-          <p className="text-xs font-bold text-text-muted uppercase tracking-wide">Selecionado</p>
-          <p className="font-display text-xl font-extrabold text-primary mt-2">{relatorioAtual.codigo}</p>
+          <p className="text-xs font-bold text-text-muted uppercase tracking-wide">Escopo</p>
+          <p className="font-display text-xl font-extrabold text-primary mt-2">{ehOperador ? 'Global' : 'Minha loja'}</p>
         </div>
         <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
           <p className="text-xs font-bold text-text-muted uppercase tracking-wide">Período</p>

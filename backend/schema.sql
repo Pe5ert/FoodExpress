@@ -90,6 +90,7 @@ CREATE TABLE clientes (
     endereco_principal TEXT,
     latitude REAL,
     longitude REAL,
+    senha_hash TEXT,
     total_pedidos INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

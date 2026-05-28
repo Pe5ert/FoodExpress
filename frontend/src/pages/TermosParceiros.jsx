@@ -7,7 +7,7 @@ const secoes = [
   {
     icone: Store,
     titulo: '1. Adesão à Plataforma',
-    texto: `Ao se cadastrar como restaurante parceiro na FoodExpress, você (pessoa jurídica ou pessoa física com CNPJ) concorda com estes Termos para Parceiros e com nossa Política de Privacidade. O cadastro está sujeito à análise e aprovação pela nossa equipe. Reservamo-nos o direito de recusar ou cancelar parcerias que não atendam aos nossos critérios de qualidade, legalidade e conformidade.`,
+    texto: `Ao se cadastrar como restaurante parceiro na FoodExpress, você (pessoa jurídica ou pessoa física com CNPJ) concorda com estes Termos para Parceiros e com nossa Política de Privacidade. O cadastro é liberado para configuração imediata, e a loja passa a aparecer para clientes quando tiver ao menos um produto disponível no cardápio. Reservamo-nos o direito de suspender ou cancelar parcerias que não atendam aos nossos critérios de qualidade, legalidade e conformidade.`,
   },
   {
     icone: DollarSign,

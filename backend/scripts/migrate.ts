@@ -112,6 +112,7 @@ async function migrate() {
   await ensureColumn('entregadores', 'senha_hash', 'TEXT')
   await ensureColumn('restaurantes', 'senha_hash', 'TEXT')
   await ensureColumn('gerentes', 'senha_hash', 'TEXT')
+  await ensureColumn('clientes', 'senha_hash', 'TEXT')
 
   await db.execute(`CREATE TABLE IF NOT EXISTS operadores (
     id TEXT PRIMARY KEY,

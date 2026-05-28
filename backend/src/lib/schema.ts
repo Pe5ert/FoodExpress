@@ -135,6 +135,7 @@ export async function ensureDatabaseHealth() {
 
       // Tabela de clientes - colunas adicionais
       await ensureColumn('clientes', 'deletado_em', 'DATETIME')
+      await ensureColumn('clientes', 'senha_hash', 'TEXT')
 
       await db.execute(`CREATE TABLE IF NOT EXISTS avaliacoes (
         id TEXT PRIMARY KEY,

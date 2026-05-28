@@ -61,7 +61,9 @@ function NavbarGerente({ usuario }) {
 
   const links = [
     { to: '/gerente', label: 'Painel', Icon: LayoutDashboard, exato: true },
-    { to: '/gerente/aprovacoes', label: 'Aprovações', Icon: ShieldCheck },
+    ...(usuario?.perfil === 'operador'
+      ? [{ to: '/gerente/aprovacoes', label: 'Aprovações', Icon: ShieldCheck }]
+      : []),
     { to: '/gerente/pedidos', label: 'Pedidos', Icon: ShoppingBag },
     { to: '/gerente/cardapio', label: 'Cardápio', Icon: UtensilsCrossed },
     { to: '/gerente/relatorios', label: 'Relatórios', Icon: BarChart3 },
@@ -402,7 +404,7 @@ export default function DashboardGerente() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         <Routes>
           <Route index element={<PainelPrincipal usuario={usuario} />} />
-          <Route path="aprovacoes" element={<AprovacoesGerente />} />
+          <Route path="aprovacoes" element={usuario?.perfil === 'operador' ? <AprovacoesGerente /> : <PainelPrincipal usuario={usuario} />} />
           <Route path="pedidos" element={<PedidosGerente />} />
           <Route path="cardapio" element={<CardapioGerente />} />
           <Route path="relatorios" element={<RelatoriosGerente />} />

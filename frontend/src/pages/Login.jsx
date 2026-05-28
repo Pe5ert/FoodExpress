@@ -4,7 +4,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff, Store, User, Bike, ArrowRight, ShieldCheck } from 'lucide-react'
 import logoSrc from '../imgs/Logo-site.png'
 import { motion as Motion, AnimatePresence } from 'framer-motion'
-import api from '../services/api'
 
 // ─── Typewriter hook ──────────────────────────────────────────────────────────
 function useTypewriter(phrases, { typingSpeed = 60, deletingSpeed = 35, pauseMs = 2200 } = {}) {
@@ -216,9 +215,7 @@ export default function Login() {
   const [carregando, setCarregando]     = useState(false)
   const [erro, setErro]                 = useState('')
   const [sucesso, setSucesso]           = useState('')
-  const [verificacaoLogin, setVerificacaoLogin] = useState(null)
-  const [codigoLogin, setCodigoLogin] = useState('')
-  const { entrar, entrarComGoogle, entrarComEmail, aplicarSessao }  = useAuth()
+  const { entrar, entrarComGoogle }  = useAuth()
   const navigate    = useNavigate()
   const config      = getConfig({ eParceiro, eEntregador, eOperador })
   const perfilLogin = eOperador ? 'operador' : eEntregador ? 'entregador' : eParceiro ? 'gerente' : 'cliente'
@@ -236,33 +233,9 @@ export default function Login() {
     setErro('')
     setSucesso('')
     try {
-      if (perfilLogin === 'cliente') {
-        const resposta = await entrarComEmail(email, perfilLogin)
-        setVerificacaoLogin(resposta)
-        setSucesso('Enviamos um código de acesso para seu e-mail.')
-      } else {
-        await entrar(email, perfilLogin, { senha })
-      }
+      await entrar(email, perfilLogin, { senha })
     } catch (error) {
       setErro(error?.message || 'Não foi possível fazer login.')
-    } finally {
-      setCarregando(false)
-    }
-  }
-
-  const confirmarCodigoLogin = async (e) => {
-    e.preventDefault()
-    if (!verificacaoLogin?.token || !codigoLogin.trim()) return
-    setCarregando(true)
-    setErro('')
-    try {
-      const resposta = await api.auth.loginConfirmar({
-        token: verificacaoLogin.token,
-        codigo: codigoLogin,
-      })
-      aplicarSessao(resposta.token, resposta.usuario)
-    } catch (error) {
-      setErro(error?.message || 'Código inválido.')
     } finally {
       setCarregando(false)
     }
@@ -389,38 +362,6 @@ export default function Login() {
             )}
 
             {/* Form */}
-            {verificacaoLogin && perfilLogin === 'cliente' ? (
-              <Motion.form
-                onSubmit={confirmarCodigoLogin}
-                className="flex flex-col gap-4"
-                variants={formVariants} initial="hidden" animate="show"
-              >
-                <p className="text-sm font-semibold text-text-muted">
-                  Digite o código enviado para <strong className="text-text-primary">{email}</strong>.
-                </p>
-                {import.meta.env.DEV && verificacaoLogin.devCode && (
-                  <p className="text-xs text-text-muted font-semibold">Código dev: <strong className="text-text-primary">{verificacaoLogin.devCode}</strong></p>
-                )}
-                <input
-                  value={codigoLogin}
-                  onChange={e => setCodigoLogin(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  placeholder="Código de 6 dígitos"
-                  required
-                  className={inputCls}
-                />
-                <Motion.button
-                  type="submit" disabled={carregando}
-                  className={`w-full py-4 text-white border-none rounded-xl font-display font-bold text-base cursor-pointer flex items-center justify-center gap-2 transition-colors disabled:bg-border disabled:text-text-muted disabled:cursor-not-allowed mt-1 ${config.ctaCls}`}
-                  variants={fieldVariant}
-                >
-                  {carregando ? 'Confirmando...' : 'Confirmar e entrar'}
-                </Motion.button>
-                <button type="button" onClick={() => { setVerificacaoLogin(null); setCodigoLogin(''); setSucesso('') }}
-                  className="text-xs text-text-muted font-bold bg-transparent border-none cursor-pointer hover:underline">
-                  Trocar e-mail
-                </button>
-              </Motion.form>
-            ) : (
             <Motion.form
               onSubmit={handleEnviar}
               className="flex flex-col gap-4"
@@ -433,23 +374,21 @@ export default function Login() {
                   required className={inputCls} />
               </Motion.div>
 
-              {perfilLogin !== 'cliente' && (
-                <Motion.div className="flex flex-col gap-1.5" variants={fieldVariant}>
-                  <label className="text-xs font-extrabold text-text-secondary uppercase tracking-wide">Senha</label>
-                  <div className="relative">
-                    <input
-                      type={mostrarSenha ? 'text' : 'password'} placeholder="••••••••"
-                      value={senha} onChange={e => setSenha(e.target.value)} required
-                      className="w-full px-4 py-3.5 pr-12 border border-border rounded-xl text-sm font-semibold text-text-primary bg-surface-2 outline-none transition-all focus:border-primary focus:bg-white focus:shadow-[0_0_0_3px_rgba(255,107,53,0.08)] placeholder:text-text-muted placeholder:font-normal"
-                    />
-                    <Motion.button type="button" onClick={() => setMostrarSenha(s => !s)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted bg-transparent border-none cursor-pointer hover:text-text-primary transition-colors"
-                      whileTap={{ scale: 0.85 }}>
-                      {mostrarSenha ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </Motion.button>
-                  </div>
-                </Motion.div>
-              )}
+              <Motion.div className="flex flex-col gap-1.5" variants={fieldVariant}>
+                <label className="text-xs font-extrabold text-text-secondary uppercase tracking-wide">Senha</label>
+                <div className="relative">
+                  <input
+                    type={mostrarSenha ? 'text' : 'password'} placeholder="••••••••"
+                    value={senha} onChange={e => setSenha(e.target.value)} required
+                    className="w-full px-4 py-3.5 pr-12 border border-border rounded-xl text-sm font-semibold text-text-primary bg-surface-2 outline-none transition-all focus:border-primary focus:bg-white focus:shadow-[0_0_0_3px_rgba(255,107,53,0.08)] placeholder:text-text-muted placeholder:font-normal"
+                  />
+                  <Motion.button type="button" onClick={() => setMostrarSenha(s => !s)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted bg-transparent border-none cursor-pointer hover:text-text-primary transition-colors"
+                    whileTap={{ scale: 0.85 }}>
+                    {mostrarSenha ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </Motion.button>
+                </div>
+              </Motion.div>
 
               <Motion.button
                 type="submit" disabled={carregando}
@@ -461,14 +400,13 @@ export default function Login() {
                 {carregando ? (
                   <>
                     <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                    {perfilLogin === 'cliente' ? 'Enviando código...' : 'Entrando...'}
+                    Entrando...
                   </>
                 ) : (
                   <>{config.ctaTexto} <ArrowRight size={16} /></>
                 )}
               </Motion.button>
             </Motion.form>
-            )}
 
             {/* Google + Cadastro — só clientes */}
             {config.mostrarCadastro && (

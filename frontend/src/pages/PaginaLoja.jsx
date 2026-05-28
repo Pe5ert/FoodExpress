@@ -14,6 +14,7 @@ function ProdutoModal({ produto, loja, onClose }) {
   const [quantidade, setQuantidade] = useState(1)
   const [selecionados, setSelecionados] = useState({})
   const [comentario, setComentario] = useState('')
+  const [denunciaRegistrada, setDenunciaRegistrada] = useState(false)
   const { adicionarItem } = useCart()
 
   const MAX_COMENTARIO = 140
@@ -199,11 +200,21 @@ function ProdutoModal({ produto, loja, onClose }) {
 
                 <button
                   type="button"
-                  onClick={() => alert('Denúncia registrada. A equipe irá revisar este item.')}
+                  onClick={() => setDenunciaRegistrada(true)}
                   className="text-sm font-bold text-primary hover:underline cursor-pointer bg-transparent border-none mb-2"
                 >
                   Denunciar item
                 </button>
+
+                {denunciaRegistrada && (
+                  <div className="mt-2 rounded-xl border border-primary/20 bg-primary-light px-3 py-3">
+                    <p className="text-xs font-extrabold uppercase tracking-wide text-primary mb-1">Denúncia registrada</p>
+                    <p className="text-sm font-bold text-text-primary">{produto.nome}</p>
+                    <p className="text-xs font-semibold text-text-muted mt-1">
+                      A equipe vai revisar este produto em {loja.nome}.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

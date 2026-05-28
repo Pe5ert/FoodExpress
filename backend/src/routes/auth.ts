@@ -6,7 +6,7 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { enviarCodigoAcesso } from '../lib/email';
 import { ensureDatabaseHealth } from '../lib/schema';
-import { verificarSenha } from '../lib/password';
+import { hashSenha, verificarSenha } from '../lib/password';
 
 const router = Router();
 
@@ -92,7 +92,7 @@ async function buscarPerfisPorEmail(email: string) {
 async function buscarUsuarioParaLogin(email: string, perfil: string) {
   const emailLimpo = normalizarEmail(email);
   if (perfil === 'cliente') {
-    const result = await db.execute({ sql: 'SELECT id, nome, email, telefone FROM clientes WHERE lower(email) = ? LIMIT 1', args: [emailLimpo] });
+    const result = await db.execute({ sql: 'SELECT id, nome, email, telefone, senha_hash FROM clientes WHERE lower(email) = ? LIMIT 1', args: [emailLimpo] });
     const row = result.rows[0] as any;
     return row ? { ...row, perfil: 'cliente' } : null;
   }
@@ -198,8 +198,13 @@ function respostaSessaoPerfil(usuario: any) {
 router.post('/registrar', async (req, res) => {
   try {
     await ensureDatabaseHealth();
-    const { email, telefone, nome } = req.body;
+    const { email, telefone, nome, senha, password } = req.body;
     if (!email) return res.status(400).json({ erro: 'E-mail obrigatório' });
+    const telefoneLimpo = String(telefone || '').replace(/\D/g, '');
+    if (telefoneLimpo.length < 10) return res.status(400).json({ erro: 'Telefone obrigatório para contato da entrega' });
+    const senhaInformada = String(senha || password || '');
+    if (!senhaInformada) return res.status(400).json({ erro: 'Senha obrigatória' });
+    if (senhaInformada.length < 6) return res.status(400).json({ erro: 'Senha deve ter pelo menos 6 caracteres' });
 
     const emailLimpo = email.toLowerCase().trim();
 
@@ -208,57 +213,17 @@ router.post('/registrar', async (req, res) => {
     if (perfisExistentes.includes('cliente')) {
       return res.status(409).json({ erro: 'Este e-mail já está cadastrado' });
     }
-    const outrosPerfis = perfisExistentes.filter(p => p !== 'cliente');
-    if (outrosPerfis.length) {
-      return res.status(409).json({ erro: `Este e-mail já está cadastrado como perfil ${outrosPerfis.join(', ')}.` });
-    }
 
-    // Cria registro pendente
-    const pendingId = `pend_${crypto.randomUUID().slice(0, 12)}`;
-    const tokenAtivacao = crypto.randomUUID();
-    const codigo = gerarCodigoVerificacao();
-    const codigoHash = hashCodigoVerificacao(tokenAtivacao, codigo);
-    const expira = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-
+    const clienteId = `cli_${crypto.randomUUID().slice(0, 8)}`;
+    const senhaHash = hashSenha(senhaInformada);
     await db.execute({
-      sql: `INSERT OR REPLACE INTO usuarios_pendentes 
-            (id, email, nome, telefone, token, codigo, codigo_hash, tipo, expira_em, criado_em)
-            VALUES (?, ?, ?, ?, ?, NULL, ?, 'email', ?, CURRENT_TIMESTAMP)`,
-      args: [pendingId, emailLimpo, nome || '', telefone || '', tokenAtivacao, codigoHash, expira]
-    }).catch(async () => {
-      // Cria a tabela se não existir
-      await db.execute(`
-        CREATE TABLE IF NOT EXISTS usuarios_pendentes (
-          id TEXT PRIMARY KEY,
-          email TEXT UNIQUE,
-          nome TEXT,
-          telefone TEXT,
-          token TEXT NOT NULL,
-          codigo TEXT,
-          codigo_hash TEXT,
-          tipo TEXT DEFAULT 'email',
-          expira_em DATETIME NOT NULL,
-          usado INTEGER DEFAULT 0,
-          criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-      await db.execute(`ALTER TABLE usuarios_pendentes ADD COLUMN codigo_hash TEXT`).catch(() => {});
-      await db.execute({
-        sql: `INSERT OR REPLACE INTO usuarios_pendentes 
-              (id, email, nome, telefone, token, codigo, codigo_hash, tipo, expira_em)
-              VALUES (?, ?, ?, ?, ?, NULL, ?, 'email', ?)`,
-        args: [pendingId, emailLimpo, nome || '', telefone || '', tokenAtivacao, codigoHash, expira]
-      });
+      sql: `INSERT INTO clientes (id, user_id, nome, email, telefone, senha_hash, total_pedidos)
+            VALUES (?, ?, ?, ?, ?, ?, 0)`,
+      args: [clienteId, clienteId, nome || emailLimpo.split('@')[0], emailLimpo, telefone || '', senhaHash]
     });
 
-    await enviarCodigoAcesso(emailLimpo, codigo, nome || emailLimpo.split('@')[0], 'cadastro');
-
-    res.json({
-      mensagem: 'Código de confirmação enviado para seu e-mail.',
-      token: tokenAtivacao,
-      expira_em: expira,
-      ...(process.env.NODE_ENV !== 'production' && { devCode: codigo })
-    });
+    const cliente = await db.execute({ sql: 'SELECT id, nome, email, telefone FROM clientes WHERE id = ?', args: [clienteId] });
+    res.status(201).json(respostaSessaoCliente(cliente.rows[0] as any));
   } catch (error) {
     console.error(error);
     res.status(500).json({ erro: 'Erro ao processar cadastro' });
@@ -402,16 +367,6 @@ router.post('/session', async (req, res) => {
       return res.status(400).json({ erro: 'Perfil inválido' });
     }
 
-    const perfisExistentes = await buscarPerfisPorEmail(emailLimpo);
-    const perfisCompatíveis = perfilNormalizado === 'gerente'
-      ? new Set(['gerente', 'restaurante'])
-      : perfilNormalizado === 'restaurante'
-        ? new Set(['restaurante', 'gerente'])
-        : new Set([perfilNormalizado]);
-    const perfisDiferentes = perfisExistentes.filter(p => !perfisCompatíveis.has(p));
-    if (perfisDiferentes.length) {
-      return res.status(409).json({ erro: `Este e-mail já está cadastrado como perfil ${perfisDiferentes.join(', ')}.` });
-    }
     if (perfilNormalizado === 'operador') {
       const operador = await db.execute({
         sql: "SELECT id, nome, email FROM operadores WHERE lower(email) = ? AND COALESCE(status, 'ativo') = 'ativo' LIMIT 1",
@@ -422,12 +377,12 @@ router.post('/session', async (req, res) => {
       }
     }
 
-    if (perfilNormalizado !== 'cliente' && !cadastro) {
+    if (!cadastro) {
       if (!senhaInformada) return res.status(400).json({ erro: 'Senha obrigatória' });
       const usuarioLogin = await buscarUsuarioParaLogin(emailLimpo, perfilNormalizado);
       if (!usuarioLogin) return res.status(404).json({ erro: 'Conta não encontrada ou inativa.' });
       if (!usuarioLogin.senha_hash) {
-        return res.status(401).json({ erro: 'Senha não configurada para esta conta. Cadastre a loja novamente ou peça ao operador para definir uma senha.' });
+        return res.status(401).json({ erro: 'Senha não configurada para esta conta. Recrie a conta no novo banco ou defina uma senha.' });
       }
       if (!verificarSenha(senhaInformada, usuarioLogin.senha_hash)) {
         return res.status(401).json({ erro: 'E-mail ou senha inválidos.' });
@@ -480,12 +435,6 @@ router.post('/auth0-sync', async (req, res) => {
     if (!email) return res.status(400).json({ erro: 'E-mail obrigatório' });
 
     const emailLimpo = email.toLowerCase().trim();
-    const perfisExistentes = await buscarPerfisPorEmail(emailLimpo);
-    const perfisDiferentes = perfisExistentes.filter(p => p !== 'cliente');
-    if (perfisDiferentes.length) {
-      return res.status(409).json({ erro: `Este e-mail já está cadastrado como perfil ${perfisDiferentes.join(', ')}.` });
-    }
-
     const existente = await db.execute({
       sql: 'SELECT * FROM clientes WHERE email = ?',
       args: [emailLimpo]
@@ -504,6 +453,12 @@ router.post('/auth0-sync', async (req, res) => {
         telefone: cliente.telefone || '',
         perfil: 'cliente'
       }});
+    }
+
+    const perfisExistentes = await buscarPerfisPorEmail(emailLimpo);
+    const perfisDiferentes = perfisExistentes.filter(p => p !== 'cliente');
+    if (perfisDiferentes.length) {
+      return res.status(409).json({ erro: `Este e-mail já está cadastrado como ${perfisDiferentes.join(', ')}. Entre pelo perfil correto com e-mail e senha.` });
     }
 
     const clienteId = `cli_${crypto.randomUUID().slice(0, 8)}`;

@@ -2,10 +2,9 @@ import { useState } from 'react'
 import { mascaraTelefone } from '../utils/mascaras'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate, Link } from 'react-router-dom'
-import { Mail, Phone, ArrowLeft, Send, User } from 'lucide-react'
+import { Mail, Phone, ArrowLeft, User, Lock, Eye, EyeOff } from 'lucide-react'
 import { motion as Motion } from 'framer-motion'
 import logoSrc from '../imgs/Logo-site.png'
-import api from '../services/api'
 
 const itemVariants = {
   hidden: { opacity: 0, y: 16 },
@@ -13,12 +12,11 @@ const itemVariants = {
 }
 
 export default function CadastroUsuario() {
-  const [dados, setDados] = useState({ nome: '', email: '', telefone: '' })
+  const [dados, setDados] = useState({ nome: '', email: '', telefone: '', senha: '' })
+  const [mostrarSenha, setMostrarSenha] = useState(false)
   const [carregando, setCarregando] = useState(false)
   const [aceitouTermos, setAceitouTermos] = useState(false)
   const [erro, setErro] = useState('')
-  const [verificacaoEmail, setVerificacaoEmail] = useState(null)
-  const [codigoEmail, setCodigoEmail] = useState('')
   const { cadastrarCliente, aplicarSessao } = useAuth()
   const navigate = useNavigate()
 
@@ -27,33 +25,23 @@ export default function CadastroUsuario() {
     if (!aceitouTermos) return
     if (!dados.nome.trim()) return
     if (!dados.email.trim()) return
+    if (dados.telefone.replace(/\D/g, '').length < 10) {
+      setErro('Informe um telefone válido para o entregador conseguir entrar em contato.')
+      return
+    }
+    if (dados.senha.length < 6) {
+      setErro('A senha deve ter pelo menos 6 caracteres.')
+      return
+    }
 
     setCarregando(true)
     setErro('')
     try {
-      const resposta = await cadastrarCliente({ nome: dados.nome, email: dados.email, telefone: dados.telefone })
-      setVerificacaoEmail(resposta)
+      const resposta = await cadastrarCliente({ nome: dados.nome, email: dados.email, telefone: dados.telefone, senha: dados.senha })
+      aplicarSessao(resposta.token, resposta.usuario)
     } catch (err) {
       console.error(err)
       setErro(err?.message || 'Não foi possível criar sua conta.')
-    } finally {
-      setCarregando(false)
-    }
-  }
-
-  const confirmarEmail = async (e) => {
-    e.preventDefault()
-    if (!verificacaoEmail?.token || !codigoEmail.trim()) return
-    setCarregando(true)
-    setErro('')
-    try {
-      const resposta = await api.auth.emailConfirmar({
-        token: verificacaoEmail.token,
-        codigo: codigoEmail,
-      })
-      aplicarSessao(resposta.token, resposta.usuario)
-    } catch (err) {
-      setErro(err?.message || 'Código inválido.')
     } finally {
       setCarregando(false)
     }
@@ -110,7 +98,7 @@ export default function CadastroUsuario() {
           </button>
 
           <h2 className="font-display text-2xl font-extrabold text-text-primary mb-1 tracking-tight">Criar conta grátis</h2>
-          <p className="text-sm text-text-muted font-semibold mb-5">Você receberá um código de confirmação por e-mail</p>
+          <p className="text-sm text-text-muted font-semibold mb-5">Cadastre e acesse com e-mail e senha</p>
 
           {erro && (
             <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
@@ -118,39 +106,7 @@ export default function CadastroUsuario() {
             </div>
           )}
 
-          {verificacaoEmail ? (
-            <form onSubmit={confirmarEmail} className="flex flex-col items-center text-center py-6 gap-4">
-              <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center">
-                <Send size={28} className="text-accent" />
-              </div>
-              <div>
-                <h3 className="font-display text-xl font-extrabold text-text-primary mb-1">Confirme seu e-mail</h3>
-                <p className="text-sm text-text-muted font-semibold leading-relaxed">
-                  Enviamos um código para<br />
-                  <strong className="text-text-primary">{dados.email}</strong>
-                </p>
-              </div>
-              {import.meta.env.DEV && verificacaoEmail.devCode && (
-                <p className="text-xs text-text-muted font-semibold">Código dev: <strong className="text-text-primary">{verificacaoEmail.devCode}</strong></p>
-              )}
-              <input
-                value={codigoEmail}
-                onChange={e => setCodigoEmail(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="Código de 6 dígitos"
-                className={inputClass.replace('pl-10', 'pl-4')}
-                required
-              />
-              <button type="submit" disabled={carregando}
-                className="w-full py-4 bg-primary text-white border-none rounded-xl font-display font-bold text-base cursor-pointer disabled:bg-border disabled:text-text-muted">
-                {carregando ? 'Confirmando...' : 'Criar conta'}
-              </button>
-              <button type="button" onClick={() => { setVerificacaoEmail(null); setCodigoEmail('') }}
-                className="text-xs text-text-muted font-bold bg-transparent border-none cursor-pointer hover:underline">
-                Trocar e-mail
-              </button>
-            </form>
-          ) : (
-            <form onSubmit={handleEnviar} className="flex flex-col gap-4">
+          <form onSubmit={handleEnviar} className="flex flex-col gap-4">
               {/* Nome */}
               <Motion.div className="flex flex-col gap-1.5" variants={itemVariants} initial="hidden" animate="show">
                 <label className="text-xs font-extrabold text-text-secondary uppercase tracking-wide">Seu nome *</label>
@@ -170,11 +126,25 @@ export default function CadastroUsuario() {
                 </div>
               </Motion.div>
               <Motion.div className="flex flex-col gap-1.5" variants={itemVariants} initial="hidden" animate="show" transition={{ delay: 0.16 }}>
-                <label className="text-xs font-extrabold text-text-secondary uppercase tracking-wide">Telefone (opcional)</label>
+                <label className="text-xs font-extrabold text-text-secondary uppercase tracking-wide">Telefone *</label>
                 <div className="relative">
                   <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
                   <input name="telefone" type="tel" placeholder="(11) 99999-9999"
-                    value={dados.telefone} onChange={handleChange} className={inputClass} />
+                    value={dados.telefone} onChange={handleChange} required className={inputClass} />
+                </div>
+              </Motion.div>
+
+              <Motion.div className="flex flex-col gap-1.5" variants={itemVariants} initial="hidden" animate="show" transition={{ delay: 0.2 }}>
+                <label className="text-xs font-extrabold text-text-secondary uppercase tracking-wide">Senha *</label>
+                <div className="relative">
+                  <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" />
+                  <input name="senha" type={mostrarSenha ? 'text' : 'password'} placeholder="Mínimo 6 caracteres"
+                    value={dados.senha} onChange={handleChange} minLength={6} required
+                    className="w-full pl-10 pr-12 py-3.5 border border-border rounded-xl text-sm font-semibold text-text-primary bg-surface-2 outline-none transition-all focus:border-primary focus:bg-white focus:shadow-[0_0_0_3px_rgba(255,107,53,0.08)] placeholder:text-text-muted placeholder:font-normal" />
+                  <button type="button" onClick={() => setMostrarSenha(s => !s)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-text-muted bg-transparent border-none cursor-pointer hover:text-text-primary">
+                    {mostrarSenha ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
                 </div>
               </Motion.div>
 
@@ -190,10 +160,9 @@ export default function CadastroUsuario() {
                 className="w-full py-4 bg-primary text-white border-none rounded-xl font-display font-bold text-base cursor-pointer disabled:bg-border disabled:text-text-muted disabled:cursor-not-allowed"
                 whileHover={{ scale: 1.02, boxShadow: '0 4px 20px rgba(255,107,53,0.35)' }}
                 whileTap={{ scale: 0.98 }}>
-                {carregando ? 'Enviando código...' : 'Criar conta'}
+                {carregando ? 'Criando conta...' : 'Criar conta'}
               </Motion.button>
             </form>
-          )}
 
           <div className="flex items-center gap-4 my-5 text-text-muted text-xs font-bold">
             <div className="flex-1 h-px bg-border" /> já tem conta? <div className="flex-1 h-px bg-border" />

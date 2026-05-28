@@ -65,7 +65,13 @@ router.get('/', async (req, res: Response) => {
     const clienteLng = Number(longitude)
     const temLocalizacao = Number.isFinite(clienteLat) && Number.isFinite(clienteLng) && !(clienteLat === 0 && clienteLng === 0)
     const limiteFinal = parseInt(limite as string) || 50
-    let sql = "SELECT * FROM restaurantes WHERE COALESCE(status, 'ativo') IN ('ativo', 'fechado')"
+    let sql = `SELECT * FROM restaurantes
+      WHERE COALESCE(status, 'ativo') IN ('ativo', 'fechado')
+        AND EXISTS (
+          SELECT 1 FROM cardapio c
+          WHERE c.restaurante_id = restaurantes.id
+            AND COALESCE(c.disponivel, 1) = 1
+        )`
     const args: any[] = []
 
     if (categoria) {
@@ -78,6 +84,7 @@ router.get('/', async (req, res: Response) => {
         EXISTS (
           SELECT 1 FROM cardapio c
           WHERE c.restaurante_id = restaurantes.id
+            AND COALESCE(c.disponivel, 1) = 1
             AND (lower(c.nome) LIKE ? OR lower(c.categoria) LIKE ? OR lower(c.descricao) LIKE ?)
         )
       )`
@@ -190,7 +197,7 @@ router.post('/cadastro', requireAuth, async (req: AuthRequest, res: Response) =>
       sql: `INSERT INTO restaurantes
             (id, user_id, nome, cnpj, email, telefone, endereco, categoria, descricao, latitude, longitude,
              taxa_comissao, avaliacao_media, status, horario_abertura, horario_fechamento, dias_aberto, formas_pagamento, senha_hash)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 15, 0, 'pendente', '18:00', '23:00', ?, ?, ?)`,
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 15, 0, 'ativo', '18:00', '23:00', ?, ?, ?)`,
       args: [
         id,
         userId,
@@ -275,6 +282,13 @@ router.get('/:id', async (req, res: Response) => {
     if (!['ativo', 'fechado'].includes(status)) {
       return res.status(404).json({ erro: 'Restaurante não encontrado' }) as any
     }
+    const itens = await db.execute({
+      sql: 'SELECT COUNT(*) as total FROM cardapio WHERE restaurante_id = ? AND COALESCE(disponivel, 1) = 1',
+      args: [id]
+    })
+    if (Number((itens.rows[0] as any)?.total || 0) < 1) {
+      return res.status(404).json({ erro: 'Restaurante não encontrado' }) as any
+    }
     res.json(restaurante)
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao buscar restaurante' })
@@ -297,7 +311,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
       sql: `INSERT INTO restaurantes
             (id, user_id, nome, cnpj, email, telefone, endereco, categoria, latitude, longitude,
              taxa_comissao, avaliacao_media, status, horario_abertura, horario_fechamento, dias_aberto, formas_pagamento)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 15, 0, 'pendente', '18:00', '23:00', ?, ?)`,
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 15, 0, 'ativo', '18:00', '23:00', ?, ?)`,
       args: [
         id,
         req.userId,
@@ -359,12 +373,15 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
     if (categoria !== undefined) { sets.push('categoria = ?'); args.push(categoria) }
     if (logo !== undefined) { sets.push('logo = ?'); args.push(logo) }
     if (capa !== undefined) { sets.push('capa = ?'); args.push(capa) }
-    if ((status !== undefined || taxa_comissao !== undefined) && !ehOperador(req)) {
-      return res.status(403).json({ erro: 'Status e comissão só podem ser alterados por operador' }) as any
+    if (taxa_comissao !== undefined && !ehOperador(req)) {
+      return res.status(403).json({ erro: 'Comissão só pode ser alterada por operador' }) as any
     }
     if (status !== undefined) {
       const statusPermitidos = ['pendente', 'ativo', 'fechado', 'rejeitado', 'inativo']
       if (!statusPermitidos.includes(String(status))) return res.status(400).json({ erro: 'Status inválido' }) as any
+      if (!ehOperador(req) && !['ativo', 'fechado'].includes(String(status))) {
+        return res.status(403).json({ erro: 'Gerentes só podem abrir ou fechar a própria loja' }) as any
+      }
       sets.push('status = ?'); args.push(status)
     }
     if (taxa_comissao !== undefined) { sets.push('taxa_comissao = ?'); args.push(Number(taxa_comissao)) }

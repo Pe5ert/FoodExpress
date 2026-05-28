@@ -1,8 +1,12 @@
 import { config } from 'dotenv'
 import { db } from '../src/lib/db'
 import { ensureDatabaseHealth, vincularRestauranteAoUsuario } from '../src/lib/schema'
+import { hashSenha } from '../src/lib/password'
 
 config()
+
+const SENHA_DEMO = process.env.SEED_DEMO_PASSWORD || '123456'
+const SENHA_DEMO_HASH = hashSenha(SENHA_DEMO)
 
 const dias = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
 const pagamentos = ['Dinheiro', 'Crédito', 'Débito', 'Pix']
@@ -40,11 +44,12 @@ async function inserirBase() {
     await db.execute({
       sql: `INSERT OR REPLACE INTO restaurantes
             (id, user_id, nome, cnpj, email, telefone, endereco, latitude, longitude, categoria, descricao, logo, capa, status,
-             taxa_comissao, tempo_medio_preparo, horario_abertura, horario_fechamento, dias_aberto, formas_pagamento, avaliacao_media)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 15, ?, '18:00', '23:00', ?, ?, ?)`,
-      args: [r.id, r.user_id, r.nome, r.cnpj, r.email, r.telefone, r.endereco, r.latitude, r.longitude, r.categoria, r.descricao, r.logo, r.capa, r.status, r.tempo_medio_preparo, JSON.stringify(dias), JSON.stringify(pagamentos), r.avaliacao_media]
+             taxa_comissao, tempo_medio_preparo, horario_abertura, horario_fechamento, dias_aberto, formas_pagamento, avaliacao_media, senha_hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 15, ?, '18:00', '23:00', ?, ?, ?, ?)`,
+      args: [r.id, r.user_id, r.nome, r.cnpj, r.email, r.telefone, r.endereco, r.latitude, r.longitude, r.categoria, r.descricao, r.logo, r.capa, r.status, r.tempo_medio_preparo, JSON.stringify(dias), JSON.stringify(pagamentos), r.avaliacao_media, SENHA_DEMO_HASH]
     })
     await vincularRestauranteAoUsuario(r.id, r.user_id, r.email, r.nome)
+    await db.execute({ sql: 'UPDATE gerentes SET senha_hash = ? WHERE restaurante_id = ? OR user_id = ?', args: [SENHA_DEMO_HASH, r.id, r.user_id] })
   }
 }
 
@@ -63,11 +68,19 @@ async function inserirClientes() {
   ]
   for (const c of clientes) {
     await db.execute({
-      sql: `INSERT OR REPLACE INTO clientes (id, user_id, nome, email, telefone, endereco_principal, latitude, longitude, total_pedidos)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-      args: c
+      sql: `INSERT OR REPLACE INTO clientes (id, user_id, nome, email, telefone, endereco_principal, latitude, longitude, senha_hash, total_pedidos)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      args: [...c, SENHA_DEMO_HASH]
     })
   }
+}
+
+async function inserirOperadorDemo() {
+  await db.execute({
+    sql: `INSERT OR REPLACE INTO operadores (id, user_id, nome, email, telefone, turno, status, senha_hash)
+          VALUES (?, ?, ?, ?, ?, ?, 'ativo', ?)`,
+    args: ['op_demo_master', 'operador-demo', 'Operador Demo', 'operador@demo.com', '(85) 96666-0001', 'geral', SENHA_DEMO_HASH]
+  })
 }
 
 async function inserirEntregadores() {
@@ -82,9 +95,9 @@ async function inserirEntregadores() {
   for (const e of entregadores) {
     await db.execute({
       sql: `INSERT OR REPLACE INTO entregadores
-            (id, user_id, nome, email, telefone, cpf, veiculo_tipo, veiculo_placa, status, latitude, longitude, ultima_atualizacao, avaliacao_media, total_entregas)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)`,
-      args: e
+            (id, user_id, nome, email, telefone, cpf, veiculo_tipo, veiculo_placa, status, latitude, longitude, ultima_atualizacao, avaliacao_media, total_entregas, senha_hash)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?)`,
+      args: [...e, SENHA_DEMO_HASH]
     })
   }
 }
@@ -208,6 +221,7 @@ async function seedDatabase() {
   await ensureDatabaseHealth()
   await inserirBase()
   await inserirClientes()
+  await inserirOperadorDemo()
   await inserirEntregadores()
   await inserirCardapioParaTodos()
   await inserirPedidosEAvaliacoes()
@@ -223,6 +237,7 @@ async function seedDatabase() {
   ), avaliacao_media)`)
 
   console.log('✅ Restaurantes, cardápios, clientes, entregadores, pedidos, rotas e avaliações inseridos')
+  console.log(`🔐 Senha demo para exemplos: ${SENHA_DEMO}`)
   console.log('🎉 Seed concluído!')
 }
 

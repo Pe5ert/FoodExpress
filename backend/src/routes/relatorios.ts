@@ -225,7 +225,8 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
         const porHora = await query(
           `SELECT strftime('%H', datetime(p.created_at, '-${BR_OFFSET_HORAS} hours')) as hora,
                   COUNT(*) as quantidade,
-                  COALESCE(SUM(p.total),0) as valor
+                  COALESCE(SUM(p.total),0) as valor,
+                  COALESCE(AVG(p.total),0) as ticket_medio
            FROM pedidos p WHERE p.created_at BETWEEN ? AND ?${fp.sql}
            GROUP BY hora ORDER BY hora`,
           [dataInicio, dataFim, ...fp.args]
@@ -235,7 +236,8 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
                     WHEN '0' THEN 'Domingo' WHEN '1' THEN 'Segunda' WHEN '2' THEN 'Terça'
                     WHEN '3' THEN 'Quarta' WHEN '4' THEN 'Quinta' WHEN '5' THEN 'Sexta' ELSE 'Sábado' END as dia_semana,
                   COUNT(*) as quantidade,
-                  COALESCE(SUM(p.total),0) as valor
+                  COALESCE(SUM(p.total),0) as valor,
+                  COALESCE(AVG(p.total),0) as ticket_medio
            FROM pedidos p WHERE p.created_at BETWEEN ? AND ?${fp.sql}
            GROUP BY dia_semana ORDER BY quantidade DESC`,
           [dataInicio, dataFim, ...fp.args]
@@ -341,6 +343,8 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
         const args: any[] = [dataInicio, dataFim]
         let where = ''
         if (restauranteId) { where = 'WHERE c.restaurante_id = ?'; args.push(restauranteId) }
+        const whereCardapio = restauranteId ? 'WHERE c.restaurante_id = ?' : ''
+        const argsCardapio = restauranteId ? [restauranteId] : []
         const produtos = await query(
           `SELECT c.id, c.nome, c.categoria, c.preco,
                   COUNT(p.id) as pedidos_no_periodo,
@@ -356,11 +360,39 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response) => {
            LIMIT 30`,
           args
         )
+        const precosPorCategoria = await query(
+          `SELECT COALESCE(NULLIF(c.categoria, ''), 'Sem categoria') as categoria,
+                  COUNT(*) as produtos,
+                  COALESCE(AVG(c.preco), 0) as preco_medio,
+                  COALESCE(MIN(c.preco), 0) as menor_preco,
+                  COALESCE(MAX(c.preco), 0) as maior_preco
+           FROM cardapio c
+           ${whereCardapio}
+           GROUP BY COALESCE(NULLIF(c.categoria, ''), 'Sem categoria')
+           ORDER BY produtos DESC, preco_medio DESC`,
+          argsCardapio
+        )
         const top = produtos[0] || {}
+        const totalProdutos = produtos.length
+        const precoMedioCardapio = totalProdutos
+          ? produtos.reduce((s, p) => s + Number(p.preco || 0), 0) / totalProdutos
+          : 0
         dados = {
-          indicadores: { produtos_cadastrados: produtos.length, produto_mais_vendido: top.nome || '—', vendas_top: Number(top.pedidos_no_periodo || 0) },
-          resumo: metricasResumo({ produtos_cadastrados: produtos.length, produto_mais_vendido: top.nome || '—', vendas_top: Number(top.pedidos_no_periodo || 0) }),
+          indicadores: {
+            produtos_cadastrados: totalProdutos,
+            produto_mais_vendido: top.nome || '—',
+            vendas_top: Number(top.pedidos_no_periodo || 0),
+            preco_medio_cardapio: dinheiro(precoMedioCardapio),
+            categorias_com_produtos: precosPorCategoria.length,
+          },
+          resumo: metricasResumo({
+            produtos_cadastrados: totalProdutos,
+            produto_mais_vendido: top.nome || '—',
+            vendas_top: Number(top.pedidos_no_periodo || 0),
+            preco_medio_cardapio: dinheiro(precoMedioCardapio),
+          }),
           detalhes: produtos,
+          series: { precos_por_categoria: precosPorCategoria },
         }
         break
       }

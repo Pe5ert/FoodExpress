@@ -8,7 +8,7 @@ const roles = [
   { id: 'cliente',     nome: 'Cliente',      descricao: 'Faça pedidos e acompanhe suas entregas',      Icon: User,            rota: '/' },
   { id: 'entregador',  nome: 'Entregador',   descricao: 'Aceite e realize entregas pela plataforma',   Icon: Bike,            rota: '/entregador' },
   { id: 'restaurante', nome: 'Restaurante',  descricao: 'Gerencie seu cardápio e pedidos recebidos',   Icon: UtensilsCrossed, rota: '/painel-restaurante' },
-  { id: 'gerente',     nome: 'Gerente',      descricao: 'Aprove restaurantes, relatórios e taxas',     Icon: BarChart3,       rota: '/gerente' },
+  { id: 'gerente',     nome: 'Gerente',      descricao: 'Gerencie pedidos, cardápio e relatórios',     Icon: BarChart3,       rota: '/gerente' },
 ]
 
 const itemVariants = {
