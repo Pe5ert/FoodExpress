@@ -5,6 +5,7 @@ import { Star, Clock, Truck, Search, ArrowLeft, Plus, Minus, X, ShoppingBag, Use
 import MobileNavBar from '../components/MobileNavBar'
 import CartDrawer from '../components/GavetaCarrinho'
 import { useCart } from '../contexts/CartContext'
+import { useAuth } from '../contexts/AuthContext'
 import api from '../services/api'
 import { imagemRestaurante, imagemProduto, emojiRestaurante, emojiProduto } from '../utils/imagens'
 
@@ -18,8 +19,11 @@ function ProdutoModal({ produto, loja, onClose, onItemAdded }) {
   const [denunciaAberta, setDenunciaAberta] = useState(false)
   const [motivoDenuncia, setMotivoDenuncia] = useState('')
   const [detalheDenuncia, setDetalheDenuncia] = useState('')
+  const [denunciaEnviando, setDenunciaEnviando] = useState(false)
+  const [denunciaErro, setDenunciaErro] = useState('')
   const imagemRef = useRef(null)
   const { adicionarItem } = useCart()
+  const { estaLogado } = useAuth()
 
   const MAX_COMENTARIO = 140
   const motivosDenuncia = [
@@ -82,6 +86,32 @@ function ProdutoModal({ produto, loja, onClose, onItemAdded }) {
       origem: imagemRef.current?.getBoundingClientRect(),
     })
     onClose()
+  }
+
+  const handleEnviarDenuncia = async () => {
+    if (!motivoDenuncia || denunciaEnviando) return
+    if (!estaLogado) {
+      setDenunciaErro('Entre na sua conta para denunciar este item.')
+      return
+    }
+
+    setDenunciaEnviando(true)
+    setDenunciaErro('')
+    try {
+      await api.denuncias.produtos.criar({
+        produtoId: produto.id,
+        restauranteId: produto.restauranteId,
+        produtoNome: produto.nome,
+        motivo: motivoDenuncia,
+        detalhe: detalheDenuncia,
+      })
+      setDenunciaRegistrada(true)
+      setDenunciaAberta(false)
+    } catch (error) {
+      setDenunciaErro(error.message || 'Não foi possível enviar a denúncia agora.')
+    } finally {
+      setDenunciaEnviando(false)
+    }
   }
 
   return (
@@ -267,18 +297,20 @@ function ProdutoModal({ produto, loja, onClose, onItemAdded }) {
                         rows={3}
                         className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm font-semibold text-text-primary outline-none resize-none focus:border-primary placeholder:text-text-muted"
                       />
+                      {denunciaErro && (
+                        <p className="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600">
+                          {denunciaErro}
+                        </p>
+                      )}
                       <div className="mt-3 flex items-center justify-between gap-3">
                         <span className="text-xs font-semibold text-text-muted">{detalheDenuncia.length}/180</span>
                         <button
                           type="button"
-                          disabled={!motivoDenuncia}
-                          onClick={() => {
-                            setDenunciaRegistrada(true)
-                            setDenunciaAberta(false)
-                          }}
+                          disabled={!motivoDenuncia || denunciaEnviando}
+                          onClick={handleEnviarDenuncia}
                           className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-xs font-extrabold text-white border-none disabled:bg-border disabled:text-text-muted disabled:cursor-not-allowed"
                         >
-                          <Send size={13} /> Enviar denúncia
+                          <Send size={13} /> {denunciaEnviando ? 'Enviando...' : 'Enviar denúncia'}
                         </button>
                       </div>
                     </div>
@@ -289,7 +321,7 @@ function ProdutoModal({ produto, loja, onClose, onItemAdded }) {
                       <p className="text-xs font-extrabold uppercase tracking-wide text-accent mb-1">Denúncia registrada</p>
                       <p className="text-sm font-bold text-text-primary">{produto.nome}</p>
                       <p className="text-xs font-semibold text-text-muted mt-1">
-                        Motivo: {motivoDenuncia}. A equipe vai revisar este item em {loja.nome}.
+                        Motivo: {motivoDenuncia}. O restaurante recebeu isso no painel dele.
                       </p>
                     </div>
                   )}

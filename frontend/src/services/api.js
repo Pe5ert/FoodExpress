@@ -187,6 +187,18 @@ export const api = {
     criar: (dados) => request('/api/tickets', { method: 'POST', body: JSON.stringify(dados) }),
   },
 
+  // ── Denúncias ─────────────────────────────────────────────────────────────
+  denuncias: {
+    produtos: {
+      listar: (params = {}) => {
+        const qs = new URLSearchParams(params).toString()
+        return request(`/api/denuncias/produtos${qs ? '?' + qs : ''}`)
+      },
+      criar: (dados) => request('/api/denuncias/produtos', { method: 'POST', body: JSON.stringify(dados) }),
+      atualizar: (id, dados) => request(`/api/denuncias/produtos/${id}`, { method: 'PUT', body: JSON.stringify(dados) }),
+    },
+  },
+
   // ── Relatórios ────────────────────────────────────────────────────────────
   relatorios: {
     buscar: (tipo, inicio, fim) => {

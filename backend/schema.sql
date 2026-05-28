@@ -207,6 +207,24 @@ CREATE TABLE tickets (
     FOREIGN KEY (pedido_id) REFERENCES pedidos(id)
 );
 
+-- Tabela de denúncias de produtos
+CREATE TABLE IF NOT EXISTS denuncias_produtos (
+    id TEXT PRIMARY KEY,
+    produto_id TEXT NOT NULL,
+    restaurante_id TEXT NOT NULL,
+    cliente_id TEXT,
+    produto_nome TEXT,
+    motivo TEXT NOT NULL,
+    detalhe TEXT,
+    status TEXT DEFAULT 'aberta',
+    resposta TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME,
+    FOREIGN KEY (produto_id) REFERENCES cardapio(id),
+    FOREIGN KEY (restaurante_id) REFERENCES restaurantes(id),
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+);
+
 -- Tabela de relatórios gerenciais
 CREATE TABLE relatorios_cache (
     id TEXT PRIMARY KEY,
@@ -228,6 +246,9 @@ CREATE INDEX idx_pedidos_created ON pedidos(created_at);
 CREATE INDEX idx_disputas_status ON disputas(status);
 CREATE INDEX idx_disputas_pedido ON disputas(pedido_id);
 CREATE INDEX idx_disputas_criador ON disputas(criador_id);
+CREATE INDEX IF NOT EXISTS idx_denuncias_produtos_restaurante ON denuncias_produtos(restaurante_id);
+CREATE INDEX IF NOT EXISTS idx_denuncias_produtos_status ON denuncias_produtos(status);
+CREATE INDEX IF NOT EXISTS idx_denuncias_produtos_cliente ON denuncias_produtos(cliente_id);
 
 CREATE TABLE IF NOT EXISTS usuarios_pendentes (
     id TEXT PRIMARY KEY,

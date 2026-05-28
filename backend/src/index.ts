@@ -19,6 +19,7 @@ import avaliacoesRouter    from './routes/avaliacoes'
 import cuponsRouter        from './routes/cupons'
 import disputasRouter      from './routes/disputas'
 import ticketsRouter       from './routes/tickets'
+import denunciasRouter     from './routes/denuncias'
 import relatoriosRouter    from './routes/relatorios'
 import rotasRouter         from './routes/rotas'
 import webhooksRouter      from './routes/webhooks'
@@ -79,6 +80,7 @@ app.use('/api/avaliacoes',    avaliacoesRouter)
 app.use('/api/cupons',        cuponsRouter)
 app.use('/api/disputas',      disputasRouter)
 app.use('/api/tickets',       ticketsRouter)
+app.use('/api/denuncias',     denunciasRouter)
 app.use('/api/relatorios',    relatoriosRouter)
 app.use('/api/rotas',         rotasRouter)
 app.use('/api/documentos',   documentosRouter)

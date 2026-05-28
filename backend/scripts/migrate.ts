@@ -188,6 +188,19 @@ async function migrate() {
       usado INTEGER DEFAULT 0,
       criado_em DATETIME DEFAULT CURRENT_TIMESTAMP
     )`,
+    `CREATE TABLE IF NOT EXISTS denuncias_produtos (
+      id TEXT PRIMARY KEY,
+      produto_id TEXT NOT NULL,
+      restaurante_id TEXT NOT NULL,
+      cliente_id TEXT,
+      produto_nome TEXT,
+      motivo TEXT NOT NULL,
+      detalhe TEXT,
+      status TEXT DEFAULT 'aberta',
+      resposta TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME
+    )`,
   ]
 
   for (const stmt of extras) {
@@ -218,6 +231,19 @@ async function migrate() {
   await ensureColumn('usuarios_pendentes', 'expira_em', 'DATETIME')
   await ensureColumn('usuarios_pendentes', 'usado', 'INTEGER DEFAULT 0')
   await ensureColumn('usuarios_pendentes', 'criado_em', 'DATETIME DEFAULT CURRENT_TIMESTAMP')
+  await ensureColumn('denuncias_produtos', 'produto_id', 'TEXT')
+  await ensureColumn('denuncias_produtos', 'restaurante_id', 'TEXT')
+  await ensureColumn('denuncias_produtos', 'cliente_id', 'TEXT')
+  await ensureColumn('denuncias_produtos', 'produto_nome', 'TEXT')
+  await ensureColumn('denuncias_produtos', 'motivo', 'TEXT')
+  await ensureColumn('denuncias_produtos', 'detalhe', 'TEXT')
+  await ensureColumn('denuncias_produtos', 'status', "TEXT DEFAULT 'aberta'")
+  await ensureColumn('denuncias_produtos', 'resposta', 'TEXT')
+  await ensureColumn('denuncias_produtos', 'created_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP')
+  await ensureColumn('denuncias_produtos', 'updated_at', 'DATETIME')
+  await db.execute('CREATE INDEX IF NOT EXISTS idx_denuncias_produtos_restaurante ON denuncias_produtos(restaurante_id)')
+  await db.execute('CREATE INDEX IF NOT EXISTS idx_denuncias_produtos_status ON denuncias_produtos(status)')
+  await db.execute('CREATE INDEX IF NOT EXISTS idx_denuncias_produtos_cliente ON denuncias_produtos(cliente_id)')
 
   await db.execute("UPDATE restaurantes SET status = 'ativo' WHERE status IS NULL OR status = ''")
   await db.execute("UPDATE restaurantes SET user_id = substr(id, 6) WHERE (user_id IS NULL OR user_id = '') AND id LIKE 'rest_%'")
