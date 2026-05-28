@@ -7,15 +7,16 @@ function normalizarBaseUrl(url) {
   return String(url || '').trim().replace(/\/$/, '')
 }
 
+
 function resolverBasePadrao() {
   if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname.toLowerCase()
-    if (['localhost', '127.0.0.1', '::1'].includes(hostname)) {
-      return API_LOCAL
+    const hostname = window.location.hostname.toLowerCase();
+    // Se não for produção, sempre usa API_LOCAL
+    if (!hostname.includes('foodexpress-production') && !hostname.includes('vercel.app')) {
+      return API_LOCAL;
     }
   }
-
-  return ENV_BASE_URL || API_PRODUCAO
+  return ENV_BASE_URL || API_PRODUCAO;
 }
 
 const BASE_URLS = Array.from(new Set([
