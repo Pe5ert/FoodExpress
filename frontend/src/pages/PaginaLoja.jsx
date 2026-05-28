@@ -330,46 +330,39 @@ function ProdutoModal({ produto, loja, onClose, onItemAdded }) {
 function ProdutoCard({ produto, onAbrir, index }) {
   return (
     <Motion.div
-      className="group cursor-pointer overflow-hidden rounded-2xl border border-border bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+      className="flex items-stretch gap-4 rounded-2xl border border-transparent px-3 py-3 cursor-pointer group transition-all hover:border-border hover:bg-white hover:shadow-sm"
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.04, ease: 'easeOut' }}
       onClick={() => onAbrir(produto)}
     >
+      <div className="flex-1 min-w-0 py-1">
+        <h4 className="font-display font-extrabold text-base text-text-primary mb-1 group-hover:text-primary transition-colors leading-snug">{produto.nome}</h4>
+        {produto.serve && (
+          <div className="flex items-center gap-1 text-xs text-text-muted font-semibold mb-1.5">
+            <Users size={11} /> Serve {produto.serve} pessoas
+          </div>
+        )}
+        {produto.desc && (
+          <p className="text-sm text-text-secondary font-medium leading-relaxed line-clamp-2 mb-3">{produto.desc}</p>
+        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-display text-base font-extrabold text-accent">R$ {produto.preco.toFixed(2).replace('.', ',')}</span>
+          {produto.precoAnterior && (
+            <span className="text-xs text-text-muted line-through font-semibold">R$ {produto.precoAnterior.toFixed(2).replace('.', ',')}</span>
+          )}
+        </div>
+      </div>
       <Motion.div
-        className="relative aspect-[4/3] w-full overflow-hidden bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center text-6xl"
+        className="w-32 h-32 sm:w-40 sm:h-32 rounded-2xl flex items-center justify-center text-5xl shrink-0 bg-gradient-to-br from-orange-50 to-orange-100 relative overflow-hidden border border-border/60"
         whileHover={{ scale: 1.03 }}
       >
         {produto.imagem ? <img src={produto.imagem} alt={produto.nome} className="absolute inset-0 w-full h-full object-cover" loading="lazy" /> : produto.emoji}
-        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/55 to-transparent opacity-80" />
-        <div className="absolute bottom-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white shadow-lg transition-transform group-hover:scale-110">
-          <Plus size={18} />
+        <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/45 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="absolute bottom-2 right-2 w-8 h-8 bg-primary rounded-full flex items-center justify-center opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all shadow-lg">
+          <Plus size={16} className="text-white" />
         </div>
       </Motion.div>
-      <div className="flex min-h-40 flex-col p-4">
-        <div className="mb-2 flex items-start justify-between gap-3">
-          <h4 className="font-display text-base font-extrabold leading-snug text-text-primary transition-colors group-hover:text-primary">{produto.nome}</h4>
-          {produto.serve && (
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-2 px-2 py-1 text-[0.65rem] font-bold text-text-muted">
-              <Users size={10} /> {produto.serve}
-            </span>
-          )}
-        </div>
-        {produto.desc && (
-          <p className="line-clamp-2 text-sm font-medium leading-relaxed text-text-secondary">{produto.desc}</p>
-        )}
-        <div className="mt-auto flex items-end justify-between gap-3 pt-4">
-          <div className="flex flex-col">
-            {produto.precoAnterior && (
-              <span className="text-xs font-semibold text-text-muted line-through">R$ {produto.precoAnterior.toFixed(2).replace('.', ',')}</span>
-            )}
-            <span className="font-display text-lg font-extrabold text-accent">R$ {produto.preco.toFixed(2).replace('.', ',')}</span>
-          </div>
-          <span className="rounded-full border border-primary/25 bg-primary-light px-3 py-1.5 text-xs font-extrabold text-primary">
-            Ver item
-          </span>
-        </div>
-      </div>
     </Motion.div>
   )
 }
@@ -786,7 +779,7 @@ export default function StorePage() {
           categoriasFiltradas.map(cat => (
             <section key={cat.id} id={cat.id} ref={el => (categoriasRef.current[cat.id] = el)} className="mb-8 scroll-mt-48">
               <h2 className="font-display text-lg font-extrabold text-text-primary mb-2 pb-2 border-b-2 border-primary/20">{cat.nome}</h2>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-0 md:gap-x-8">
                 {cat.produtos.map((produto, i) => (
                   <ProdutoCard key={produto.id} produto={produto} onAbrir={setProdutoAberto} index={i} />
                 ))}
