@@ -1,34 +1,25 @@
-// @ts-nocheck
-import { createClient } from '@libsql/client'
+import mysql from 'mysql2/promise'
 import dotenv from 'dotenv'
-import { mkdirSync } from 'fs'
-import { join, resolve } from 'path'
-
 dotenv.config()
 
-const databaseDir = resolve(process.cwd(), '../database')
-try { mkdirSync(databaseDir, { recursive: true }) } catch {}
+const pool = mysql.createPool({
+  host:     process.env.DB_HOST     || 'localhost',
+  port:     Number(process.env.DB_PORT) || 3306,
+  user:     process.env.DB_USER     || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME     || 'foodexpress',
+  waitForConnections: true,
+  connectionLimit: 10,
+})
 
-const configuredUrl = process.env.TURSO_DATABASE_URL?.trim()
-const configuredToken = process.env.TURSO_AUTH_TOKEN?.trim()
-
-// Para apresentação local, o projeto funciona mesmo sem Turso configurado.
-// Se TURSO_DATABASE_URL existir, ele usa Turso normalmente. Se não existir,
-// cai em SQLite local via libSQL: database/foodexpress-local.db.
-const url = configuredUrl || `file:${join(databaseDir, 'foodexpress-local.db')}`
-const authToken = url.startsWith('file:') ? undefined : configuredToken
-
-if (!configuredUrl) {
-  console.warn('⚠️ TURSO_DATABASE_URL não configurado. Usando banco local: database/foodexpress-local.db')
+export const db = {
+  execute: async (query: { sql: string; args?: any[] } | string) => {
+    const sql  = typeof query === 'string' ? query : query.sql
+    const args = typeof query === 'string' ? [] : (query.args ?? [])
+    const [rows] = await pool.execute(sql, args)
+    return { rows: rows as any[] }
+  }
 }
-
-if (!url.startsWith('file:') && !authToken) {
-  console.error('\n❌ TURSO_AUTH_TOKEN não configurado para banco Turso!')
-  console.error('   Configure backend/.env ou use TURSO_DATABASE_URL=file:../database/foodexpress-local.db para teste local.\n')
-  process.exit(1)
-}
-
-export const db = createClient(authToken ? { url, authToken } : { url })
 
 export async function query(sql: string, params?: any[]) {
   try {

@@ -26,7 +26,6 @@ import webhooksRouter      from './routes/webhooks'
 import documentosRouter    from './routes/documentos'
 import cnpjRouter           from './routes/cnpj'
 import authRouter          from './routes/auth'
-import { ensureDatabaseHealth } from './lib/schema'
 
 const app = express()
 app.set('trust proxy', 1)
@@ -96,10 +95,6 @@ app.get('/health', (_req, res) => {
 app.use((_req, res) => {
   res.status(404).json({ erro: 'Rota não encontrada' })
 })
-
-ensureDatabaseHealth()
-  .then(() => console.log('✅ Schema validado automaticamente'))
-  .catch((error) => console.error('⚠️ Auto-migration falhou:', error.message))
 
 app.listen(PORT, () => {
   console.log(`🚀 FoodExpress Backend rodando na porta ${PORT}`)
