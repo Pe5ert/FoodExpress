@@ -1,13 +1,25 @@
 // services/api.js — cliente centralizado para o backend FoodExpress
 const API_PRODUCAO = 'https://foodexpress-production-c874.up.railway.app'
+const API_LOCAL = 'http://localhost:3001'
 const ENV_BASE_URL = import.meta.env.VITE_API_URL || API_PRODUCAO
 
 function normalizarBaseUrl(url) {
   return String(url || '').trim().replace(/\/$/, '')
 }
 
+function resolverBasePadrao() {
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname.toLowerCase()
+    if (['localhost', '127.0.0.1', '::1'].includes(hostname)) {
+      return API_LOCAL
+    }
+  }
+
+  return ENV_BASE_URL || API_PRODUCAO
+}
+
 const BASE_URLS = Array.from(new Set([
-  normalizarBaseUrl(ENV_BASE_URL),
+  normalizarBaseUrl(resolverBasePadrao()),
   normalizarBaseUrl(API_PRODUCAO),
 ].filter(Boolean)))
 

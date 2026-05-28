@@ -37,6 +37,10 @@ const configuredOrigins = (process.env.FRONTEND_URL || 'https://food-express-pea
 const allowedOrigins = [
   ...configuredOrigins,
   'https://food-express-pearl.vercel.app',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
 ]
 
 // ── Webhook Stripe precisa do body raw ANTES do express.json() ────────────
