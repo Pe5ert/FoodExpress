@@ -41,6 +41,38 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.theme-changing body,
+.theme-changing .bg-white,
+.theme-changing .bg-background,
+.theme-changing .bg-surface-2,
+.theme-changing .bg-primary-light,
+.theme-changing .border,
+.theme-changing .border-border,
+.theme-changing input,
+.theme-changing textarea,
+.theme-changing select {
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-changing body,
+  .theme-changing .bg-white,
+  .theme-changing .bg-background,
+  .theme-changing .bg-surface-2,
+  .theme-changing .bg-primary-light,
+  .theme-changing .border,
+  .theme-changing .border-border,
+  .theme-changing input,
+  .theme-changing textarea,
+  .theme-changing select {
+    transition: none;
+  }
+}
+
 /* ── Famílias de fonte ───────────────────────────────────────── */
 .font-display { font-family: 'Poppins', sans-serif !important; }
 .font-mono    { font-family: 'Roboto Mono', monospace !important; }
@@ -58,49 +90,73 @@ body {
 
 /* ── Modo Escuro ─────────────────────────────────────────────── */
 .dark {
-  --color-primary:        #FF6B35;
-  --color-secondary:      #7C6DFF;
-  --color-accent:         #1B998B;
-  --color-background:     #0F0F13;
-  --color-text:           #F0EDE8;
-  --color-primary-light:  #2A1A10;
-  --color-surface-2:      #1C1A22;
-  --color-border:         #2E2B38;
-  --color-text-muted:     #7A7280;
-  --color-text-secondary: #B0A9C0;
+  --color-primary:        #FF7A45;
+  --color-secondary:      #9D91FF;
+  --color-accent:         #28C6A7;
+  --color-background:     #141518;
+  --color-text:           #F7F2EA;
+  --color-primary-light:  #33231D;
+  --color-surface-2:      #24262B;
+  --color-border:         #373941;
+  --color-text-muted:     #9C928A;
+  --color-text-secondary: #D1C7BD;
 }
 
 .dark body {
-  background-color: #0F0F13;
-  color: #F0EDE8;
+  background-color: #141518;
+  color: #F7F2EA;
 }
 
 /* Sobrescreve classes Tailwind com vars CSS no modo escuro */
-.dark .bg-white          { background-color: #1A1825 !important; }
-.dark .bg-background     { background-color: #0F0F13 !important; }
+.dark .bg-white          { background-color: #1D1F24 !important; }
+.dark .bg-background     { background-color: #141518 !important; }
 .dark .bg-surface-2,
-.dark .bg-\[surface-2\]  { background-color: #1C1A22 !important; }
-.dark .bg-primary-light  { background-color: #2A1A10 !important; }
+.dark .bg-\[surface-2\]  { background-color: #24262B !important; }
+.dark .bg-primary-light  { background-color: #33231D !important; }
+.dark .bg-secondary      { background-color: #25213B !important; }
+.dark .bg-red-50         { background-color: #3A1E20 !important; }
+.dark .bg-yellow-50      { background-color: #342B17 !important; }
+.dark .bg-orange-50,
+.dark .bg-orange-100     { background-color: #302319 !important; }
 
-.dark .border-border     { border-color: #2E2B38 !important; }
-.dark .border             { border-color: #2E2B38 !important; }
+.dark .border-border     { border-color: #373941 !important; }
+.dark .border             { border-color: #373941 !important; }
 
-.dark .text-text-primary  { color: #F0EDE8 !important; }
-.dark .text-text-secondary{ color: #B0A9C0 !important; }
-.dark .text-text-muted    { color: #7A7280 !important; }
+.dark .text-text-primary  { color: #F7F2EA !important; }
+.dark .text-text-secondary{ color: #D1C7BD !important; }
+.dark .text-text-muted    { color: #9C928A !important; }
+.dark .text-primary       { color: #FF8B5C !important; }
+.dark .text-secondary     { color: #A99CFF !important; }
+.dark .text-accent        { color: #34D4B4 !important; }
+.dark .text-red-500       { color: #FF8A8A !important; }
+.dark .text-yellow-500    { color: #FFD166 !important; }
 
-.dark .shadow-sm   { box-shadow: 0 1px 3px rgba(0,0,0,0.4) !important; }
-.dark .shadow-md   { box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important; }
+.dark .hover\:bg-surface-2:hover { background-color: #2B2D33 !important; }
+.dark .hover\:bg-primary-light:hover { background-color: #3A281F !important; }
+
+.dark .shadow-sm   { box-shadow: 0 1px 3px rgba(0,0,0,0.28) !important; }
+.dark .shadow-md   { box-shadow: 0 8px 22px rgba(0,0,0,0.32) !important; }
+.dark .shadow-xl,
+.dark .shadow-2xl  { box-shadow: 0 20px 46px rgba(0,0,0,0.38) !important; }
 
 .dark input,
 .dark textarea,
 .dark select {
-  background-color: #1C1A22 !important;
-  color: #F0EDE8 !important;
-  border-color: #2E2B38 !important;
+  background-color: #24262B !important;
+  color: #F7F2EA !important;
+  border-color: #373941 !important;
 }
 .dark input::placeholder,
-.dark textarea::placeholder { color: #7A7280 !important; }
+.dark textarea::placeholder { color: #8E877F !important; }
 
-.dark table thead tr { background-color: #1C1A22 !important; }
-.dark table tbody tr:hover { background-color: #1C1A22 !important; }
+.dark table thead tr { background-color: #24262B !important; }
+.dark table tbody tr:hover { background-color: #24262B !important; }
+
+.dark .from-orange-50 {
+  --tw-gradient-from: #302319 var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgba(48, 35, 25, 0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+.dark .to-orange-100 {
+  --tw-gradient-to: #3B2A1F var(--tw-gradient-to-position) !important;
+}

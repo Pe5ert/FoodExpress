@@ -83,43 +83,221 @@ function formatarItensPedido(itens) {
   }).join(', ')
 }
 
+function formatarCep(valor) {
+  const digitos = String(valor || '').replace(/\D/g, '').slice(0, 8)
+  if (digitos.length <= 5) return digitos
+  return `${digitos.slice(0, 5)}-${digitos.slice(5)}`
+}
 
-// ── Componente adicionar endereço ─────────────────────────────────────────────
-function AdicionarEndereco({ clienteId, onSalvo }) {
-  const [aberto, setAberto] = useState(false)
-  const [rua, setRua] = useState('')
+function montarNomeEndereco(dadosCep, cepFormatado) {
+  const logradouro = String(dadosCep?.logradouro || '').trim()
+  const bairro = String(dadosCep?.bairro || '').trim()
+  const cidade = String(dadosCep?.localidade || '').trim()
+  const uf = String(dadosCep?.uf || '').trim()
+
+  if (logradouro && bairro) return `${logradouro}, ${bairro}`
+  if (logradouro) return logradouro
+  if (bairro && cidade) return `${bairro}, ${cidade}`
+  if (cidade && uf) return `${cidade}, ${uf}`
+  return `CEP ${cepFormatado}`
+}
+
+function montarEnderecoCompleto(dados, cepFormatado, numero, complemento) {
+  const logradouro = String(dados?.logradouro || '').trim()
+  const bairro = String(dados?.bairro || '').trim()
+  const cidade = String(dados?.localidade || '').trim()
+  const uf = String(dados?.uf || '').trim()
+  const partes = [
+    [logradouro || `CEP ${cepFormatado}`, numero].filter(Boolean).join(', '),
+    complemento,
+    bairro,
+    cidade && uf ? `${cidade} - ${uf}` : cidade || uf,
+  ].filter(Boolean)
+  return partes.join(' · ')
+}
+
+function EnderecoCepForm({ clienteId, enderecoAtual = '', onSalvo, onCancelar, modo = 'adicionar' }) {
+  const [cep, setCep] = useState('')
+  const [dadosCep, setDadosCep] = useState(null)
+  const [numero, setNumero] = useState('')
+  const [complemento, setComplemento] = useState('')
+  const [enderecoLivre, setEnderecoLivre] = useState(enderecoAtual || '')
+  const [status, setStatus] = useState('')
   const [salvando, setSalvando] = useState(false)
 
-  const salvar = async () => {
-    if (!rua.trim()) return
-    setSalvando(true)
+  const buscarCep = async () => {
+    const cepFormatado = formatarCep(cep)
+    const digitos = cepFormatado.replace(/\D/g, '')
+    if (digitos.length !== 8) {
+      setStatus('Digite um CEP válido com 8 números.')
+      return
+    }
     try {
-      await api.clientes.atualizar(clienteId, { endereco_principal: rua })
-      onSalvo({ id: Date.now(), label: 'Novo', rua, principal: false })
-      setRua('')
-      setAberto(false)
-    } catch (e) { alert('Erro: ' + e.message) }
-    finally { setSalvando(false) }
+      setStatus('Buscando endereço pelo CEP...')
+      const resposta = await fetch(`https://viacep.com.br/ws/${digitos}/json/`)
+      const dados = await resposta.json()
+      if (!resposta.ok || dados?.erro) {
+        setStatus('CEP não encontrado. Confira os números ou consulte nos Correios.')
+        return
+      }
+      setCep(cepFormatado)
+      setDadosCep(dados)
+      setEnderecoLivre('')
+      setStatus('Endereço encontrado. Informe número e complemento, se houver.')
+    } catch {
+      setStatus('Não foi possível consultar o CEP agora. Tente novamente.')
+    }
   }
 
-  if (!aberto) return (
-    <button onClick={() => setAberto(true)}
-      className="flex items-center gap-2 text-sm font-bold text-primary hover:underline cursor-pointer bg-transparent border-none">
-      <MapPin size={15} /> Adicionar endereço
-    </button>
-  )
+  const salvar = async () => {
+    if (!clienteId) {
+      setStatus('Perfil ainda carregando. Tente novamente em instantes.')
+      return
+    }
+    let enderecoFinal = ''
+    if (dadosCep) {
+      if (!numero.trim()) {
+        setStatus('Informe o número do endereço.')
+        return
+      }
+      enderecoFinal = montarEnderecoCompleto(dadosCep, formatarCep(cep), numero.trim(), complemento.trim())
+    } else {
+      enderecoFinal = enderecoLivre.trim()
+      if (!enderecoFinal) {
+        setStatus('Busque pelo CEP ou informe o endereço completo.')
+        return
+      }
+    }
+
+    setSalvando(true)
+    setStatus('')
+    try {
+      await api.clientes.atualizar(clienteId, { endereco_principal: enderecoFinal })
+      onSalvo({
+        id: modo === 'editar' ? 'principal' : Date.now(),
+        label: modo === 'editar' ? 'Principal' : 'Novo',
+        rua: enderecoFinal,
+        bairro: '',
+        cidade: '',
+        principal: modo === 'editar',
+      })
+    } catch (e) {
+      setStatus(e.message || 'Não foi possível salvar o endereço.')
+    } finally {
+      setSalvando(false)
+    }
+  }
+
   return (
-    <div className="flex flex-col gap-2 mt-1">
-      <input type="text" value={rua} onChange={e => setRua(e.target.value)}
-        placeholder="Ex: Rua das Flores, 123 - Bairro"
-        className="w-full px-3 py-2 border border-border rounded-xl text-sm font-semibold text-text-primary outline-none focus:border-primary transition-all" />
-      <div className="flex gap-2">
-        <button onClick={salvar} disabled={salvando}
-          className="flex-1 py-2 bg-primary text-white rounded-xl text-xs font-bold cursor-pointer border-none disabled:opacity-60">
-          {salvando ? 'Salvando...' : 'Salvar'}
+    <div className="rounded-2xl border border-border bg-surface-1 p-4">
+      <div className="flex items-start gap-3 mb-4">
+        <div className="w-9 h-9 rounded-xl bg-primary-light flex items-center justify-center shrink-0">
+          <MapPin size={16} className="text-primary" />
+        </div>
+        <div>
+          <p className="font-display text-sm font-extrabold text-text-primary">
+            {modo === 'editar' ? 'Editar endereço' : 'Adicionar novo endereço'}
+          </p>
+          <p className="text-xs font-semibold text-text-muted">
+            Busque pelo CEP e complete com número, apartamento, bloco ou condomínio.
+          </p>
+        </div>
+      </div>
+
+      {enderecoAtual && !dadosCep && (
+        <div className="mb-3 rounded-xl border border-border bg-white px-4 py-3">
+          <p className="text-xs font-extrabold uppercase tracking-wide text-text-muted mb-1">Endereço atual</p>
+          <p className="text-sm font-bold text-text-primary">{enderecoAtual}</p>
+        </div>
+      )}
+
+      {dadosCep && (
+        <div className="mb-3 rounded-xl border border-primary/20 bg-primary-light px-4 py-3">
+          <p className="text-xs font-extrabold uppercase tracking-wide text-primary mb-1">Endereço encontrado</p>
+          <p className="text-sm font-bold text-text-primary">{montarNomeEndereco(dadosCep, formatarCep(cep))}</p>
+          <p className="text-xs font-semibold text-text-muted">
+            {[dadosCep.localidade, dadosCep.uf].filter(Boolean).join(' - ')}
+          </p>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto]">
+        <input
+          type="text"
+          inputMode="numeric"
+          autoComplete="postal-code"
+          value={cep}
+          onChange={(e) => {
+            setCep(formatarCep(e.target.value))
+            setDadosCep(null)
+          }}
+          placeholder="00000-000"
+          className="w-full h-12 rounded-xl border border-border bg-white px-4 text-sm font-bold text-text-primary outline-none focus:border-primary"
+        />
+        <button
+          type="button"
+          onClick={buscarCep}
+          className="h-12 rounded-xl bg-primary px-5 text-sm font-extrabold text-white border-none cursor-pointer hover:bg-primary/90"
+        >
+          Buscar CEP
         </button>
-        <button onClick={() => setAberto(false)}
-          className="flex-1 py-2 bg-surface-2 border border-border rounded-xl text-xs font-bold cursor-pointer text-text-secondary">
+      </div>
+
+      {dadosCep ? (
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[0.8fr_1.2fr]">
+          <input
+            type="text"
+            inputMode="numeric"
+            autoComplete="address-line2"
+            value={numero}
+            onChange={(e) => setNumero(e.target.value.replace(/[^\dA-Za-z/-]/g, '').slice(0, 12))}
+            placeholder="Número"
+            className="w-full h-12 rounded-xl border border-border bg-white px-4 text-sm font-bold text-text-primary outline-none focus:border-primary"
+          />
+          <input
+            type="text"
+            autoComplete="address-line3"
+            value={complemento}
+            onChange={(e) => setComplemento(e.target.value.slice(0, 80))}
+            placeholder="Complemento: apto, bloco, condomínio"
+            className="w-full h-12 rounded-xl border border-border bg-white px-4 text-sm font-semibold text-text-primary outline-none focus:border-primary"
+          />
+        </div>
+      ) : (
+        <textarea
+          value={enderecoLivre}
+          onChange={(e) => setEnderecoLivre(e.target.value.slice(0, 160))}
+          placeholder="Ou informe o endereço completo"
+          className="mt-3 w-full min-h-24 rounded-xl border border-border bg-white px-4 py-3 text-sm font-semibold text-text-primary outline-none focus:border-primary"
+        />
+      )}
+
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <a
+          href="https://buscacepinter.correios.com.br/app/endereco/index.php"
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm font-bold text-primary hover:underline"
+        >
+          Não sei meu CEP
+        </a>
+        {status && <p className="text-xs font-semibold text-text-muted sm:text-right">{status}</p>}
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={salvar}
+          disabled={salvando}
+          className="h-11 rounded-xl bg-primary text-sm font-extrabold text-white border-none cursor-pointer disabled:opacity-60"
+        >
+          {salvando ? 'Salvando...' : 'Salvar endereço'}
+        </button>
+        <button
+          type="button"
+          onClick={onCancelar}
+          className="h-11 rounded-xl border border-border bg-white text-sm font-bold text-text-secondary cursor-pointer hover:bg-surface-2"
+        >
           Cancelar
         </button>
       </div>
@@ -127,22 +305,32 @@ function AdicionarEndereco({ clienteId, onSalvo }) {
   )
 }
 
+// ── Componente adicionar endereço ─────────────────────────────────────────────
+function AdicionarEndereco({ clienteId, onSalvo }) {
+  const [aberto, setAberto] = useState(false)
+
+  if (!aberto) return (
+    <button onClick={() => setAberto(true)}
+      className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-primary/40 bg-primary-light/40 px-4 py-3 text-sm font-extrabold text-primary hover:bg-primary-light cursor-pointer">
+      <MapPin size={15} /> Adicionar novo endereço
+    </button>
+  )
+  return (
+    <EnderecoCepForm
+      clienteId={clienteId}
+      modo="adicionar"
+      onCancelar={() => setAberto(false)}
+      onSalvo={(endereco) => {
+        onSalvo(endereco)
+        setAberto(false)
+      }}
+    />
+  )
+}
+
 // ── Componente editar endereço ────────────────────────────────────────────────
 function EditarEndereco({ end, clienteId, onSalvo }) {
   const [editando, setEditando] = useState(false)
-  const [rua, setRua] = useState(end.rua || '')
-  const [salvando, setSalvando] = useState(false)
-
-  const salvar = async () => {
-    if (!rua.trim()) return
-    setSalvando(true)
-    try {
-      await api.clientes.atualizar(clienteId, { endereco_principal: rua })
-      onSalvo(rua)
-      setEditando(false)
-    } catch (e) { alert('Erro: ' + e.message) }
-    finally { setSalvando(false) }
-  }
 
   if (!editando) return (
     <button onClick={() => setEditando(true)}
@@ -151,18 +339,18 @@ function EditarEndereco({ end, clienteId, onSalvo }) {
     </button>
   )
   return (
-    <div className="flex flex-col gap-1 mt-1 w-full">
-      <input type="text" value={rua} onChange={e => setRua(e.target.value)}
-        className="w-full px-3 py-1.5 border border-border rounded-lg text-xs font-semibold text-text-primary outline-none focus:border-primary transition-all" />
-      <div className="flex gap-1">
-        <button onClick={salvar} disabled={salvando}
-          className="flex-1 py-1 bg-primary text-white rounded-lg text-xs font-bold cursor-pointer border-none disabled:opacity-60">
-          {salvando ? '...' : 'Salvar'}
-        </button>
-        <button onClick={() => setEditando(false)}
-          className="flex-1 py-1 bg-surface-2 border border-border rounded-lg text-xs font-bold cursor-pointer text-text-secondary">
-          Cancelar
-        </button>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/45 px-4 py-6">
+      <div className="w-full max-w-md">
+        <EnderecoCepForm
+          clienteId={clienteId}
+          enderecoAtual={end.rua}
+          modo="editar"
+          onCancelar={() => setEditando(false)}
+          onSalvo={(novo) => {
+            onSalvo(novo.rua)
+            setEditando(false)
+          }}
+        />
       </div>
     </div>
   )
@@ -588,7 +776,10 @@ export default function PerfilCliente() {
                   </div>
                 ))}
                 <div className="px-5 py-4">
-                  <AdicionarEndereco clienteId={clienteId} onSalvo={(end) => setEnderecos(prev => [...prev, end])} />
+                  <AdicionarEndereco
+                    clienteId={clienteId}
+                    onSalvo={(end) => setEnderecos([{ ...end, id: 'principal', label: 'Principal', principal: true }])}
+                  />
                 </div>
               </div>
             </SecaoCard>

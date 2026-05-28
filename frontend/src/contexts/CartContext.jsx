@@ -21,14 +21,14 @@ export function CartProvider({ children }) {
   }, [itens]);
 
   const adicionarItem = (item) => {
-    setItens((anterior) => {
-      const restauranteAtual = getRestauranteId(anterior[0]);
-      const restauranteNovo = getRestauranteId(item);
-      if (restauranteAtual && restauranteNovo && restauranteAtual !== restauranteNovo) {
-        alert('Você só pode adicionar itens de um restaurante por vez. Limpe o carrinho para trocar de restaurante.');
-        return anterior;
-      }
+    const restauranteAtual = getRestauranteId(itens[0]);
+    const restauranteNovo = getRestauranteId(item);
+    if (restauranteAtual && restauranteNovo && restauranteAtual !== restauranteNovo) {
+      alert('Você só pode adicionar itens de um restaurante por vez. Limpe o carrinho para trocar de restaurante.');
+      return false;
+    }
 
+    setItens((anterior) => {
       const existente = anterior.find((i) => i.id === item.id);
       if (existente) {
         return anterior.map((i) =>
@@ -38,6 +38,11 @@ export function CartProvider({ children }) {
       // Garante que restauranteId seja preservado para o checkout
       return [...anterior, { ...item, restauranteId: restauranteNovo || item.restauranteId, quantidade: item.quantidade || 1 }];
     });
+    window.setTimeout(() => {
+      if (typeof window === 'undefined') return;
+      window.dispatchEvent(new CustomEvent('foodexpress:carrinho-item-adicionado', { detail: { item } }));
+    }, 0);
+    return true;
   };
 
   const removerItem = (id) => {

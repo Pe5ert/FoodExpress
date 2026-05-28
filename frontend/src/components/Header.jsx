@@ -17,6 +17,7 @@ export default function Header() {
   const [busca, setBusca] = useState('')
   const [carrinhoAberto, setCarrinhoAberto] = useState(false)
   const [menuMobile, setMenuMobile] = useState(false)
+  const [cartPulse, setCartPulse] = useState(0)
   const [oculto, setOculto] = useState(false)
   const [ultimoScroll, setUltimoScroll] = useState(0)
   const [popupLocalizacao, setPopupLocalizacao] = useState(false)
@@ -229,6 +230,12 @@ export default function Header() {
     return () => window.removeEventListener('localizacao-atualizada', handleLocationUpdated)
   }, [])
 
+  useEffect(() => {
+    const pulse = () => setCartPulse(v => v + 1)
+    window.addEventListener('foodexpress:carrinho-item-adicionado', pulse)
+    return () => window.removeEventListener('foodexpress:carrinho-item-adicionado', pulse)
+  }, [])
+
   const handleBusca = (e) => {
     e.preventDefault()
     if (busca.trim()) navigate(`/busca?q=${encodeURIComponent(busca)}`)
@@ -305,8 +312,12 @@ export default function Header() {
                   className="hidden sm:flex w-10 h-10 rounded-full border-none bg-transparent items-center justify-center text-text-secondary cursor-pointer transition-all hover:bg-primary-light hover:text-primary"
                 ><User size={20} /></button>
 
-                <button onClick={() => setCarrinhoAberto(true)}
+                <Motion.button
+                  data-cart-target="main-cart"
+                  onClick={() => setCarrinhoAberto(true)}
                   className="flex items-center gap-2 bg-transparent border border-border rounded-full py-2 pr-3 pl-2.5 cursor-pointer transition-all hover:border-primary hover:bg-primary-light"
+                  animate={cartPulse ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+                  transition={{ duration: 0.28, ease: 'easeOut' }}
                 >
                   <div className="relative w-5 h-5 flex items-center justify-center text-text-primary">
                     <ShoppingBag size={18} />
@@ -316,7 +327,7 @@ export default function Header() {
                     <span className="font-display text-xs font-extrabold text-text-primary leading-none">R$ {total.toFixed(2)}</span>
                     <span className="text-[0.65rem] text-text-muted font-semibold leading-snug">{qtd} {qtd === 1 ? 'item' : 'itens'}</span>
                   </div>
-                </button>
+                </Motion.button>
 
                 <button onClick={toggle}
                   className="hidden sm:flex w-10 h-10 rounded-full border-none bg-transparent items-center justify-center text-text-secondary cursor-pointer transition-all hover:bg-surface-2"
@@ -328,14 +339,18 @@ export default function Header() {
               </>
             ) : (
               <>
-                <button onClick={() => setCarrinhoAberto(true)}
+                <Motion.button
+                  data-cart-target="main-cart"
+                  onClick={() => setCarrinhoAberto(true)}
                   className="flex items-center gap-2 bg-transparent border border-border rounded-full py-2 pr-3 pl-2.5 cursor-pointer transition-all hover:border-primary hover:bg-primary-light"
+                  animate={cartPulse ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+                  transition={{ duration: 0.28, ease: 'easeOut' }}
                 >
                   <div className="relative w-5 h-5 flex items-center justify-center text-text-primary">
                     <ShoppingBag size={18} />
                     {qtd > 0 && <span className="absolute -top-1.5 -right-1.5 bg-primary text-white rounded-full min-w-3.5 h-3.5 text-[0.55rem] font-extrabold flex items-center justify-center px-px border border-white">{qtd}</span>}
                   </div>
-                </button>
+                </Motion.button>
 
                 <button onClick={() => navigate('/login')}
                   className="hidden sm:flex items-center gap-1.5 bg-transparent border border-border rounded-full px-4 py-2 text-sm font-bold text-text-primary cursor-pointer transition-all hover:border-primary hover:text-primary hover:bg-primary-light whitespace-nowrap"

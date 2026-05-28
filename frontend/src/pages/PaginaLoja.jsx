@@ -10,11 +10,12 @@ import { imagemRestaurante, imagemProduto, emojiRestaurante, emojiProduto } from
 
 
 // ─── Modal produto ────────────────────────────────────────────────────────────
-function ProdutoModal({ produto, loja, onClose }) {
+function ProdutoModal({ produto, loja, onClose, onItemAdded }) {
   const [quantidade, setQuantidade] = useState(1)
   const [selecionados, setSelecionados] = useState({})
   const [comentario, setComentario] = useState('')
   const [denunciaRegistrada, setDenunciaRegistrada] = useState(false)
+  const imagemRef = useRef(null)
   const { adicionarItem } = useCart()
 
   const MAX_COMENTARIO = 140
@@ -51,7 +52,7 @@ function ProdutoModal({ produto, loja, onClose }) {
       alert('Esta loja está fechada no momento.')
       return
     }
-    adicionarItem({
+    const item = {
       id: `${produto.id}-${JSON.stringify(selecionados)}`,
       cardapioId: produto.id,
       produtoId: produto.id,
@@ -61,6 +62,14 @@ function ProdutoModal({ produto, loja, onClose }) {
       quantidade,
       comentario,
       restauranteId: produto.restauranteId,
+      imagem: produto.imagem,
+    }
+    const adicionado = adicionarItem(item)
+    if (!adicionado) return
+    onItemAdded?.({
+      produto,
+      quantidade,
+      origem: imagemRef.current?.getBoundingClientRect(),
     })
     onClose()
   }
@@ -86,7 +95,7 @@ function ProdutoModal({ produto, loja, onClose }) {
         <div className="flex flex-col sm:flex-row overflow-hidden flex-1 min-h-0">
 
           {/* Imagem — desktop fica na esquerda */}
-          <div className="relative sm:w-72 h-52 sm:h-auto bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center text-8xl shrink-0 overflow-hidden">
+          <div ref={imagemRef} className="relative sm:w-72 h-52 sm:h-auto bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center text-8xl shrink-0 overflow-hidden">
             {produto.imagem ? <img src={produto.imagem} alt={produto.nome} className="absolute inset-0 w-full h-full object-cover" /> : produto.emoji}
             <button onClick={onClose}
               className="absolute top-3 right-3 w-9 h-9 bg-white rounded-full border border-border flex items-center justify-center cursor-pointer hover:bg-surface-2 transition-all shadow-sm">
@@ -384,6 +393,8 @@ export default function StorePage() {
   const [navOculta, setNavOculta] = useState(false)
   const [ultimoScroll, setUltimoScroll] = useState(0)
   const [infoAberta, setInfoAberta] = useState(false)
+  const [flyItem, setFlyItem] = useState(null)
+  const [cartPulse, setCartPulse] = useState(0)
   const categoriasRef = useRef({})
   const { quantidadeTotal } = useCart()
 
@@ -483,6 +494,36 @@ export default function StorePage() {
     }
   }
 
+  const alvoCarrinho = () => {
+    const alvos = Array.from(document.querySelectorAll('[data-cart-target]'))
+    return alvos.find((el) => {
+      const rect = el.getBoundingClientRect()
+      return rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight
+    }) || null
+  }
+
+  const animarProdutoParaCarrinho = ({ produto, origem }) => {
+    const alvo = alvoCarrinho()?.getBoundingClientRect()
+    if (!origem || !alvo) {
+      setCartPulse(v => v + 1)
+      return
+    }
+    setFlyItem({
+      id: `${produto.id}-${Date.now()}`,
+      emoji: produto.emoji,
+      imagem: produto.imagem,
+      from: {
+        x: origem.left + origem.width / 2 - 28,
+        y: origem.top + origem.height / 2 - 28,
+      },
+      to: {
+        x: alvo.left + alvo.width / 2 - 18,
+        y: alvo.top + alvo.height / 2 - 18,
+      },
+    })
+    setCartPulse(v => v + 1)
+  }
+
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-8">
 
@@ -510,8 +551,12 @@ export default function StorePage() {
             </div>
           </div>
 
-          <Motion.button onClick={() => setCarrinhoAberto(true)}
+          <Motion.button
+            data-cart-target="store-cart"
+            onClick={() => setCarrinhoAberto(true)}
             className="relative flex items-center gap-2 bg-transparent border border-border rounded-full py-2 pr-3 pl-2.5 cursor-pointer transition-all hover:border-primary hover:bg-primary-light shrink-0"
+            animate={cartPulse ? { scale: [1, 1.08, 1] } : { scale: 1 }}
+            transition={{ duration: 0.28, ease: 'easeOut' }}
             whileTap={{ scale: 0.95 }}
           >
             <div className="relative w-5 h-5 flex items-center justify-center text-text-primary">
@@ -676,6 +721,22 @@ export default function StorePage() {
       <MobileNavBar />
       <CartDrawer isOpen={carrinhoAberto} onClose={() => setCarrinhoAberto(false)} />
 
+      <AnimatePresence>
+        {flyItem && (
+          <Motion.div
+            key={flyItem.id}
+            className="fixed z-[260] pointer-events-none h-14 w-14 rounded-2xl bg-white border border-border shadow-xl flex items-center justify-center overflow-hidden text-2xl"
+            initial={{ x: flyItem.from.x, y: flyItem.from.y, scale: 1, opacity: 1 }}
+            animate={{ x: flyItem.to.x, y: flyItem.to.y, scale: 0.62, opacity: 0.2 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.58, ease: [0.2, 0.8, 0.2, 1] }}
+            onAnimationComplete={() => setFlyItem(null)}
+          >
+            {flyItem.imagem ? <img src={flyItem.imagem} alt="" className="h-full w-full object-cover" /> : flyItem.emoji}
+          </Motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Modal Ver mais */}
       <AnimatePresence>
         {infoAberta && (
@@ -710,7 +771,7 @@ export default function StorePage() {
 
       <AnimatePresence>
         {produtoAberto && (
-          <ProdutoModal produto={produtoAberto} loja={loja} onClose={() => setProdutoAberto(null)} />
+          <ProdutoModal produto={produtoAberto} loja={loja} onClose={() => setProdutoAberto(null)} onItemAdded={animarProdutoParaCarrinho} />
         )}
       </AnimatePresence>
     </div>

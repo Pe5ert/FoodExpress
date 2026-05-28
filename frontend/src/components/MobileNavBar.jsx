@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import CartDrawer from './GavetaCarrinho';
 import { Home, Search, ShoppingBag, User, LogIn } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,9 +10,16 @@ export default function MobileNavBar() {
   const { estaLogado } = useAuth();
   const { quantidadeTotal } = useCart();
   const [carrinhoAberto, setCarrinhoAberto] = useState(false);
+  const [cartPulse, setCartPulse] = useState(0);
   const location = useLocation();
   const logado = estaLogado;
   const ativo = (path) => location.pathname === path;
+
+  useEffect(() => {
+    const pulse = () => setCartPulse(v => v + 1);
+    window.addEventListener('foodexpress:carrinho-item-adicionado', pulse);
+    return () => window.removeEventListener('foodexpress:carrinho-item-adicionado', pulse);
+  }, []);
 
   const navItems = [
     { to: '/', label: 'Início', Icon: Home },
@@ -44,8 +51,11 @@ export default function MobileNavBar() {
         })}
         {/* Botão carrinho */}
         <Motion.button
+          data-cart-target="mobile-cart"
           onClick={() => setCarrinhoAberto(true)}
           className="flex flex-col items-center gap-1 px-4 py-1.5 rounded-xl text-text-muted border-none bg-transparent cursor-pointer"
+          animate={cartPulse ? { y: [0, -3, 0], scale: [1, 1.08, 1] } : { y: 0, scale: 1 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
           whileTap={{ scale: 0.85 }}
         >
           <div className="relative">

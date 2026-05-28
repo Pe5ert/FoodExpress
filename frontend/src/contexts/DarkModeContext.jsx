@@ -16,7 +16,13 @@ export function DarkModeProvider({ children }) {
     try { localStorage.setItem('darkMode', dark) } catch {}
   }, [dark])
 
-  const toggle = () => setDark(d => !d)
+  const toggle = () => {
+    document.documentElement.classList.add('theme-changing')
+    window.setTimeout(() => {
+      document.documentElement.classList.remove('theme-changing')
+    }, 260)
+    setDark(d => !d)
+  }
 
   return (
     <DarkModeContext.Provider value={{ dark, toggle }}>
