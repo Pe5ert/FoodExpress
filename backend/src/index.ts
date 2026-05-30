@@ -118,7 +118,12 @@ app.listen(PORT, () => {
     })
     .catch((error) => {
       databaseStatus = 'error'
-      databaseError = error?.message || 'Falha ao validar banco'
+      databaseError = [
+        error?.code,
+        error?.errno,
+        error?.sqlState,
+        error?.sqlMessage || error?.message || String(error)
+      ].filter(Boolean).join(' | ') || 'Falha ao validar banco'
       console.error('❌ Auto-migration falhou:', databaseError)
     })
 })

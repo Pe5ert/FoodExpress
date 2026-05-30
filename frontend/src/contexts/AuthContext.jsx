@@ -145,6 +145,16 @@ export function AuthProvider({ children }) {
         ) {
           return;
         }
+
+        if (error?.status >= 500) {
+          sessionStorage.setItem(
+            'authError',
+            'Login com Google indisponível no momento. Use e-mail e senha enquanto o banco é verificado.'
+          );
+          navigate('/login', { replace: true });
+          return;
+        }
+
         localStorage.removeItem('usuario');
         localStorage.removeItem('token');
         setUsuario(null);
