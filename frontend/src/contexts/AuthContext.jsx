@@ -75,6 +75,15 @@ export function AuthProvider({ children }) {
 
     if (auth0Loading) return;
 
+    if (
+      localStorage.getItem('preferLocalAuth') === 'true' &&
+      localStorage.getItem('token') &&
+      localStorage.getItem('usuario')
+    ) {
+      setAuth0Sincronizado(true);
+      return;
+    }
+
     if (!isAuthenticated || !auth0Sub) {
       ultimaContaAuth0Sincronizada.current = null;
       setAuth0Sincronizado(true);
@@ -129,6 +138,13 @@ export function AuthProvider({ children }) {
             : usuarioCliente
         ));
       } catch (error) {
+        if (
+          localStorage.getItem('preferLocalAuth') === 'true' &&
+          localStorage.getItem('token') &&
+          localStorage.getItem('usuario')
+        ) {
+          return;
+        }
         localStorage.removeItem('usuario');
         localStorage.removeItem('token');
         setUsuario(null);
@@ -160,7 +176,14 @@ export function AuthProvider({ children }) {
       cadastro: Boolean(extras.cadastro),
       senha: extras.senha || extras.password || '',
     }
-    const token = await criarTokenBackend(novoUsuario)
+    localStorage.setItem('preferLocalAuth', 'true')
+    let token
+    try {
+      token = await criarTokenBackend(novoUsuario)
+    } catch (error) {
+      localStorage.removeItem('preferLocalAuth')
+      throw error
+    }
     const { senha: _senha, password: _password, ...usuarioPersistivel } = novoUsuario
     localStorage.setItem('usuario', JSON.stringify(usuarioPersistivel))
     localStorage.setItem('token', token)
@@ -209,6 +232,7 @@ export function AuthProvider({ children }) {
 
     localStorage.setItem('usuario', JSON.stringify(usuarioSessao))
     localStorage.setItem('token', token)
+    localStorage.setItem('preferLocalAuth', 'true')
     setUsuario(usuarioSessao)
     navigate(destinoPorPerfil(usuarioSessao.perfil), { replace: true })
   }
@@ -290,6 +314,7 @@ export function AuthProvider({ children }) {
   const sair = () => {
     localStorage.removeItem('usuario');
     localStorage.removeItem('token');
+    localStorage.removeItem('preferLocalAuth');
     setUsuario(null);
 
     if (usuario?.provider === 'auth0' && auth0Configurado) {

@@ -3,6 +3,7 @@ import { Router, Response } from 'express'
 import { db } from '../lib/db'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { hashSenha } from '../lib/password'
+import crypto from 'crypto'
 
 const router = Router()
 
@@ -186,12 +187,13 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     const senhaInformada = String(senha || password || '')
     const senhaHash = senhaInformada ? hashSenha(senhaInformada) : null
 
-    const result = await db.execute({
+    const id = `ent_${crypto.randomUUID().slice(0, 12)}`
+    await db.execute({
       sql: `INSERT INTO entregadores (id, user_id, nome, email, cpf, telefone, veiculo_tipo, veiculo_placa, status, latitude, longitude, avaliacao_media, total_entregas, senha_hash)
-            VALUES (lower(hex(randomblob(16))), ?, ?, ?, ?, ?, ?, ?, 'ausente', 0, 0, 5.0, 0, ?)`,
-      args: [req.userId, nome, normalizarEmail(email || req.userEmail), cpf, telefone || '', veiculo_tipo, placaFinal, senhaHash]
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ausente', 0, 0, 5.0, 0, ?)`,
+      args: [id, req.userId, nome, normalizarEmail(email || req.userEmail), cpf, telefone || '', veiculo_tipo, placaFinal, senhaHash]
     })
-    res.status(201).json({ mensagem: 'Entregador criado com sucesso', id: result.lastInsertRowid })
+    res.status(201).json({ mensagem: 'Entregador criado com sucesso', id })
   } catch (error) {
     res.status(500).json({ erro: 'Erro ao criar entregador' })
   }

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { Router, Response } from 'express'
 import Stripe from 'stripe'
+import crypto from 'crypto'
 import { db } from '../lib/db'
 import { requireAuth, AuthRequest } from '../middleware/auth'
 import { buscarRestauranteDoUsuario } from '../lib/schema'
@@ -500,10 +501,11 @@ router.post('/:id/atribuir-entregador', requireAuth, async (req: AuthRequest, re
     const p = pedido.rows[0] as any
     const r = rest.rows[0] as any
 
+    const rotaId = `rota_${crypto.randomUUID().slice(0, 12)}`
     await db.execute({
       sql: `INSERT INTO rotas (id, pedido_id, entregador_id, origem_lat, origem_lng, destino_lat, destino_lng)
-            VALUES (lower(hex(randomblob(16))), ?, ?, ?, ?, ?, ?)`,
-      args: [req.params.id, entregadorId, r.latitude, r.longitude, p.latitude_entrega, p.longitude_entrega]
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      args: [rotaId, req.params.id, entregadorId, r.latitude, r.longitude, p.latitude_entrega, p.longitude_entrega]
     })
     res.json({ success: true })
   } catch (error) {

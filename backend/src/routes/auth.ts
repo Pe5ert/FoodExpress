@@ -122,6 +122,26 @@ async function buscarUsuarioParaLogin(email: string, perfil: string) {
   return null;
 }
 
+async function definirSenhaInicial(email: string, perfil: string, senhaHash: string) {
+  const emailLimpo = normalizarEmail(email);
+  if (perfil === 'cliente') {
+    await db.execute({ sql: 'UPDATE clientes SET senha_hash = ? WHERE lower(email) = ?', args: [senhaHash, emailLimpo] });
+    return;
+  }
+  if (perfil === 'entregador') {
+    await db.execute({ sql: 'UPDATE entregadores SET senha_hash = ? WHERE lower(email) = ?', args: [senhaHash, emailLimpo] });
+    return;
+  }
+  if (perfil === 'operador') {
+    await db.execute({ sql: 'UPDATE operadores SET senha_hash = ? WHERE lower(email) = ?', args: [senhaHash, emailLimpo] });
+    return;
+  }
+  if (perfil === 'gerente' || perfil === 'restaurante') {
+    await db.execute({ sql: 'UPDATE gerentes SET senha_hash = ? WHERE lower(email) = ?', args: [senhaHash, emailLimpo] });
+    await db.execute({ sql: 'UPDATE restaurantes SET senha_hash = ? WHERE lower(email) = ?', args: [senhaHash, emailLimpo] });
+  }
+}
+
 async function criarOuAtualizarClientePorEmail(row: any) {
   const emailLimpo = normalizarEmail(row.email);
   const telefone = row.telefone || '';
@@ -296,11 +316,14 @@ router.post('/login', async (req, res) => {
     const expira = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
     await db.execute({
-      sql: `INSERT INTO usuarios_pendentes 
+      sql: `INSERT INTO usuarios_pendentes
             (id, email, nome, telefone, token, codigo, codigo_hash, tipo, expira_em, criado_em)
             VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, CURRENT_TIMESTAMP)
             ON DUPLICATE KEY UPDATE
+              nome = VALUES(nome),
+              telefone = VALUES(telefone),
               token = VALUES(token),
+              codigo = NULL,
               codigo_hash = VALUES(codigo_hash),
               tipo = VALUES(tipo),
               expira_em = VALUES(expira_em),
@@ -383,7 +406,12 @@ router.post('/session', async (req, res) => {
       const usuarioLogin = await buscarUsuarioParaLogin(emailLimpo, perfilNormalizado);
       if (!usuarioLogin) return res.status(404).json({ erro: 'Conta não encontrada ou inativa.' });
       if (!usuarioLogin.senha_hash) {
-        return res.status(401).json({ erro: 'Senha não configurada para esta conta. Recrie a conta no novo banco ou defina uma senha.' });
+        if (senhaInformada.length < 6) {
+          return res.status(401).json({ erro: 'Esta conta antiga ainda não tinha senha. Digite uma senha com pelo menos 6 caracteres para ativar o acesso.' });
+        }
+        const senhaHash = hashSenha(senhaInformada);
+        await definirSenhaInicial(emailLimpo, perfilNormalizado, senhaHash);
+        usuarioLogin.senha_hash = senhaHash;
       }
       if (!verificarSenha(senhaInformada, usuarioLogin.senha_hash)) {
         return res.status(401).json({ erro: 'E-mail ou senha inválidos.' });

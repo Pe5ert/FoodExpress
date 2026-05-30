@@ -1,19 +1,10 @@
 // @ts-nocheck
-import { db } from './db'
-import { hashSenha } from './password'
 import { readFileSync } from 'fs'
 import { join } from 'path'
+import { db } from './db'
+import { hashSenha } from './password'
 
 let schemaPromise: Promise<void> | null = null
-
-async function ensureColumn(table: string, column: string, definition: string) {
-  const info = await db.execute(`PRAGMA table_info(${table})`)
-  const exists = info.rows.some((row: any) => row.name === column)
-  if (!exists) {
-    await db.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
-    console.log(`➕ Coluna criada: ${table}.${column}`)
-  }
-}
 
 function normalizarEmail(email?: string) {
   return String(email || '').trim().toLowerCase()
@@ -28,7 +19,23 @@ function idEstavel(valor: string) {
     .slice(0, 48) || 'principal'
 }
 
-async function aplicarSchemaBase() {
+async function ensureColumn(table: string, column: string, definition: string) {
+  const result = await db.execute({
+    sql: `SELECT COUNT(*) AS total
+          FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = ?
+            AND COLUMN_NAME = ?`,
+    args: [table, column]
+  })
+  const exists = Number((result.rows[0] as any)?.total || 0) > 0
+  if (!exists) {
+    await db.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+    console.log(`➕ Coluna criada: ${table}.${column}`)
+  }
+}
+
+async function aplicarSchemaMysql() {
   const candidatePaths = [
     join(process.cwd(), '../database/schema.sql'),
     join(process.cwd(), 'database/schema.sql'),
@@ -48,14 +55,19 @@ async function aplicarSchemaBase() {
   const statements = schema
     .split(';')
     .map(s => s.replace(/--[^\n]*/g, '').trim())
-    .filter(s => s.length > 10)
+    .filter(s => s.length > 4)
 
   for (const stmt of statements) {
     try {
       await db.execute(stmt)
     } catch (e: any) {
       const message = String(e?.message || '').toLowerCase()
-      if (!message.includes('already exists') && !message.includes('duplicate')) {
+      const code = String(e?.code || '')
+      if (
+        !message.includes('duplicate') &&
+        !message.includes('already exists') &&
+        code !== 'ER_DUP_KEYNAME'
+      ) {
         throw e
       }
     }
@@ -63,7 +75,96 @@ async function aplicarSchemaBase() {
 }
 
 export async function ensureDatabaseHealth() {
-  return
+  if (schemaPromise) return schemaPromise
+
+  schemaPromise = (async () => {
+    try {
+      await aplicarSchemaMysql()
+
+      await ensureColumn('restaurantes', 'user_id', 'VARCHAR(191)')
+      await ensureColumn('restaurantes', 'horario_abertura', 'VARCHAR(10)')
+      await ensureColumn('restaurantes', 'horario_fechamento', 'VARCHAR(10)')
+      await ensureColumn('restaurantes', 'dias_aberto', 'TEXT')
+      await ensureColumn('restaurantes', 'formas_pagamento', 'TEXT')
+      await ensureColumn('restaurantes', 'logo', 'TEXT')
+      await ensureColumn('restaurantes', 'capa', 'TEXT')
+      await ensureColumn('restaurantes', 'motivo_rejeicao', 'TEXT')
+      await ensureColumn('restaurantes', 'senha_hash', 'TEXT')
+      await ensureColumn('restaurantes', 'avaliacao_media', 'DOUBLE DEFAULT 0')
+
+      await ensureColumn('clientes', 'senha_hash', 'TEXT')
+      await ensureColumn('clientes', 'deletado_em', 'DATETIME')
+      await ensureColumn('gerentes', 'senha_hash', 'TEXT')
+      await ensureColumn('operadores', 'senha_hash', 'TEXT')
+      await ensureColumn('entregadores', 'saldo_disponivel', 'DOUBLE DEFAULT 0')
+      await ensureColumn('entregadores', 'saldo_total', 'DOUBLE DEFAULT 0')
+      await ensureColumn('entregadores', 'senha_hash', 'TEXT')
+      await ensureColumn('cardapio', 'imagem', 'TEXT')
+      await ensureColumn('pedidos', 'desconto', 'DOUBLE DEFAULT 0')
+      await ensureColumn('pedidos', 'troco', 'DOUBLE DEFAULT 0')
+      await ensureColumn('pedidos', 'updated_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP')
+      await ensureColumn('pedidos', 'ganho_entregador', 'DOUBLE DEFAULT 0')
+      await ensureColumn('pedidos', 'repasse_entregador_status', "VARCHAR(50) DEFAULT 'pendente'")
+      await ensureColumn('pedidos', 'repasse_entregador_em', 'DATETIME')
+      await ensureColumn('tickets', 'resposta', 'TEXT')
+      await ensureColumn('tickets', 'updated_at', 'DATETIME DEFAULT CURRENT_TIMESTAMP')
+
+      await db.execute("UPDATE restaurantes SET status = 'ativo' WHERE status IS NULL OR status = ''")
+      await db.execute("UPDATE restaurantes SET user_id = SUBSTRING(id, 6) WHERE (user_id IS NULL OR user_id = '') AND id LIKE 'rest_%'")
+      await db.execute("UPDATE entregadores SET cpf = CONCAT('AUTO-', user_id) WHERE cpf = '000.000.000-00' AND user_id IS NOT NULL AND user_id != ''")
+
+      const operadorEmail = normalizarEmail(process.env.OPERATOR_EMAIL || process.env.OPERADOR_EMAIL)
+      if (operadorEmail) {
+        const operadorBaseId = idEstavel(operadorEmail)
+        const operadorSenhaHash = process.env.OPERATOR_PASSWORD || process.env.OPERADOR_SENHA
+          ? hashSenha(String(process.env.OPERATOR_PASSWORD || process.env.OPERADOR_SENHA))
+          : null
+        await db.execute({
+          sql: `INSERT INTO operadores (id, user_id, nome, email, telefone, turno, status, senha_hash)
+                VALUES (?, ?, ?, ?, ?, ?, 'ativo', ?)
+                ON DUPLICATE KEY UPDATE
+                  nome = VALUES(nome),
+                  telefone = COALESCE(NULLIF(VALUES(telefone), ''), telefone),
+                  senha_hash = COALESCE(VALUES(senha_hash), senha_hash),
+                  status = 'ativo'`,
+          args: [
+            `op_${operadorBaseId}`,
+            `op_${operadorBaseId}`,
+            process.env.OPERATOR_NAME || process.env.OPERADOR_NOME || 'Operador FoodExpress',
+            operadorEmail,
+            process.env.OPERATOR_PHONE || process.env.OPERADOR_TELEFONE || '',
+            process.env.OPERATOR_SHIFT || process.env.OPERADOR_TURNO || 'geral',
+            operadorSenhaHash,
+          ]
+        })
+      }
+
+      await db.execute(`INSERT IGNORE INTO gerentes
+        (id, user_id, nome, email, telefone, cargo, restaurante_id, permissoes, status)
+        SELECT
+          CONCAT('ger_', r.user_id),
+          r.user_id,
+          COALESCE(NULLIF(r.nome, ''), 'Gerente'),
+          COALESCE(NULLIF(r.email, ''), CONCAT(r.user_id, '@local.dev')),
+          COALESCE(r.telefone, ''),
+          'gerente',
+          r.id,
+          'admin',
+          'ativo'
+        FROM restaurantes r
+        WHERE r.user_id IS NOT NULL AND r.user_id != ''`)
+    } catch (error: any) {
+      console.error('⚠️ Falha ao validar schema automaticamente:', error.message)
+      throw error
+    }
+  })()
+
+  try {
+    await schemaPromise
+  } catch (error) {
+    schemaPromise = null
+    throw error
+  }
 }
 
 export async function vincularRestauranteAoUsuario(restauranteId: string, userId?: string, email?: string, nome?: string) {
@@ -89,9 +190,6 @@ export async function vincularRestauranteAoUsuario(restauranteId: string, userId
   const gerenteNome = nome || r.nome || 'Gerente'
   const gerenteTelefone = r.telefone || ''
 
-  // A tabela gerentes tem UNIQUE(user_id) e UNIQUE(email). Em bancos já usados,
-  // pode existir uma linha com o user_id e outra com o mesmo email. Antes o INSERT
-  // só tratava conflito pelo id e derrubava o backend com SQLITE_CONSTRAINT.
   const candidatos = await db.execute({
     sql: `SELECT id, user_id, email
           FROM gerentes
@@ -108,7 +206,6 @@ export async function vincularRestauranteAoUsuario(restauranteId: string, userId
   else if (porUser?.id) manterId = porUser.id
   else if (porEmail?.id) manterId = porEmail.id
 
-  // Remove duplicatas de vínculo do mesmo usuário/email para não bater nos UNIQUE.
   for (const g of linhas) {
     if (g.id !== manterId) {
       await db.execute({ sql: 'DELETE FROM gerentes WHERE id = ?', args: [g.id] })
@@ -141,10 +238,9 @@ export async function vincularRestauranteAoUsuario(restauranteId: string, userId
 }
 
 export async function buscarRestauranteDoUsuario(userId?: string, email?: string, nome?: string) {
+  await ensureDatabaseHealth()
   const emailNormalizado = normalizarEmail(email)
 
-  // Primeiro tenta pelo e-mail do usuário. Isso recupera lojas criadas antes da
-  // troca do ID local de Date.now() para ID estável por e-mail, sem mostrar loja de terceiros.
   if (emailNormalizado) {
     const porGerente = await db.execute({
       sql: `SELECT r.*

@@ -1,23 +1,32 @@
+// @ts-nocheck
 import mysql from 'mysql2/promise'
 import dotenv from 'dotenv'
+
 dotenv.config()
 
 const pool = mysql.createPool({
-  host:     process.env.DB_HOST     || 'localhost',
-  port:     Number(process.env.DB_PORT) || 3306,
-  user:     process.env.DB_USER     || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME     || 'foodexpress',
+  host: process.env.DB_HOST || process.env.MYSQLHOST || 'localhost',
+  port: Number(process.env.DB_PORT || process.env.MYSQLPORT || 3306),
+  user: process.env.DB_USER || process.env.MYSQLUSER || 'root',
+  password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD || '',
+  database: process.env.DB_NAME || process.env.MYSQLDATABASE || 'foodexpress',
   waitForConnections: true,
   connectionLimit: 10,
+  namedPlaceholders: false,
 })
 
 export const db = {
   execute: async (query: { sql: string; args?: any[] } | string) => {
-    const sql  = typeof query === 'string' ? query : query.sql
+    const sql = typeof query === 'string' ? query : query.sql
     const args = typeof query === 'string' ? [] : (query.args ?? [])
-    const [rows] = await pool.execute(sql, args)
-    return { rows: rows as any[] }
+    const [result] = await pool.execute(sql, args)
+    const rows = Array.isArray(result) ? result : []
+    return {
+      rows,
+      rowsAffected: Number((result as any)?.affectedRows || 0),
+      lastInsertRowid: (result as any)?.insertId,
+      insertId: (result as any)?.insertId,
+    }
   }
 }
 

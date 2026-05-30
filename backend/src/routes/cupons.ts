@@ -2,6 +2,7 @@
 import { Router, Response } from 'express'
 import { db } from '../lib/db'
 import { requireAuth, AuthRequest } from '../middleware/auth'
+import crypto from 'crypto'
 
 const router = Router()
 
@@ -104,11 +105,12 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     if (!tiposValidos.includes(tipo)) return res.status(400).json({ erro: 'Tipo de cupom inválido' }) as any
     if (tipo !== 'frete_gratis' && Number(desconto) <= 0) return res.status(400).json({ erro: 'Desconto deve ser maior que zero' }) as any
 
-    const result = await db.execute({
-      sql: 'INSERT INTO cupons (id, codigo, desconto, tipo, minimo, data_expiracao, ativo) VALUES (lower(hex(randomblob(16))), ?, ?, ?, ?, ?, 1)',
-      args: [String(codigo).toUpperCase(), Number(desconto || 0), tipo, Number(minimo || 0), data_expiracao || null]
+    const id = `cup_${crypto.randomUUID().slice(0, 12)}`
+    await db.execute({
+      sql: 'INSERT INTO cupons (id, codigo, desconto, tipo, minimo, data_expiracao, ativo) VALUES (?, ?, ?, ?, ?, ?, 1)',
+      args: [id, String(codigo).toUpperCase(), Number(desconto || 0), tipo, Number(minimo || 0), data_expiracao || null]
     })
-    res.status(201).json({ mensagem: 'Cupom criado com sucesso', id: result.lastInsertRowid })
+    res.status(201).json({ mensagem: 'Cupom criado com sucesso', id })
   } catch (error: any) {
     if (error?.message?.includes('no such table')) return res.status(500).json({ erro: 'Tabela de cupons não existe. Rode a migration/schema antes de criar cupons.' }) as any
     if (error?.message?.includes('UNIQUE')) return res.status(409).json({ erro: 'Cupom já existe' }) as any
