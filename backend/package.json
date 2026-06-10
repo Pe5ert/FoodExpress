@@ -10,6 +10,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "migrate": "tsx scripts/migrate.ts",
+    "schema": "npm run migrate",
     "seed": "tsx src/scripts/seed.ts"
   },
   "dependencies": {

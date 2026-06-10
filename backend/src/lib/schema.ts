@@ -205,9 +205,9 @@ async function garantirAdministradorPrincipal() {
 
 export async function ensureDatabaseHealth() {
   if (schemaPromise) return schemaPromise
-
   schemaPromise = (async () => {
-    try {
+    let attemptedApplySchema = false
+    async function doValidation() {
       await aplicarSchemaMysql()
 
       await ensureColumn('restaurantes', 'user_id', 'VARCHAR(191)')
@@ -295,9 +295,28 @@ export async function ensureDatabaseHealth() {
 
       await garantirAdministradorPrincipal()
       console.log('✅ Estrutura do banco validada sem popular dados')
+    }
+
+    try {
+      await doValidation()
     } catch (error: any) {
-      console.error('⚠️ Falha ao validar schema automaticamente:', error.message)
-      throw error
+      // Se a validação falhar por tabela inexistente, tente aplicar o schema.sql explicitamente
+      const message = String(error?.message || '').toLowerCase()
+      const code = String(error?.code || '')
+      if (!attemptedApplySchema && (message.includes("doesn't exist") || message.includes('no such table') || code === 'ER_NO_SUCH_TABLE')) {
+        attemptedApplySchema = true
+        try {
+          console.warn('Tabela ausente detectada — aplicando schema.sql novamente e revalida...')
+          await aplicarSchemaMysql()
+          await doValidation()
+        } catch (e) {
+          console.error('⚠️ Falha ao aplicar schema após detecção de tabela ausente:', e?.message || e)
+          throw e
+        }
+      } else {
+        console.error('⚠️ Falha ao validar schema automaticamente:', error.message)
+        throw error
+      }
     }
   })()
 
