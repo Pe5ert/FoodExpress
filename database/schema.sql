@@ -413,7 +413,11 @@ CREATE TABLE IF NOT EXISTS disputas (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS tickets (
   id VARCHAR(191) NOT NULL,
-  cliente_id VARCHAR(191) NOT NULL,
+  cliente_id VARCHAR(191) NULL,
+  solicitante_id VARCHAR(191) NULL,
+  solicitante_tipo VARCHAR(50) NULL,
+  solicitante_nome VARCHAR(255) NULL,
+  solicitante_email VARCHAR(255) NULL,
   titulo VARCHAR(255) NOT NULL,
   descricao TEXT NOT NULL,
   categoria VARCHAR(120) NOT NULL,
