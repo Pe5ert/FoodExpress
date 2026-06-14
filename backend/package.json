@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && cp src/lib/schema-embed.sql dist/lib/schema-embed.sql",
     "start": "node dist/index.js",
     "migrate": "tsx scripts/migrate.ts",
     "schema": "npm run migrate",

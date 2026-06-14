@@ -170,8 +170,11 @@ async function aplicarSchemaMysql() {
     // Fallback: usar schema-embed.sql embutido no pacote
     const embedPaths = [
       join(__dirname, 'schema-embed.sql'),
+      join(__dirname, '../src/lib/schema-embed.sql'),
+      join(process.cwd(), 'backend/src/lib/schema-embed.sql'),
+      join(process.cwd(), '../backend/src/lib/schema-embed.sql'),
       join(process.cwd(), 'src/lib/schema-embed.sql'),
-      join(process.cwd(), '../src/lib/schema-embed.sql'),
+      join(process.cwd(), 'schema-embed.sql'),
     ]
     for (const path of embedPaths) {
       try {

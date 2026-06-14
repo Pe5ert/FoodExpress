@@ -1,6 +1,3 @@
--- Schema SQL embutido — Fallback se database/schema.sql não for encontrado
-SET NAMES utf8mb4;
-SET FOREIGN_KEY_CHECKS = 0;
 -- ============================================================
 -- FoodExpress - Schema MySQL/MariaDB para produção Railway
 -- Banco alvo: railway
@@ -501,4 +498,14 @@ CREATE TABLE IF NOT EXISTS usuarios_pendentes (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS relatorios_cache (
   id VARCHAR(191) NOT NULL,
+  tipo VARCHAR(100) NOT NULL,
+  periodo VARCHAR(100) NOT NULL,
+  dados LONGTEXT NOT NULL,
+  data_referencia DATE NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_relatorios_cache_tipo_periodo (tipo, periodo),
+  KEY idx_relatorios_cache_data (data_referencia)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
