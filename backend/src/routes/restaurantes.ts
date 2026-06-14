@@ -134,12 +134,62 @@ router.get('/', async (req, res: Response) => {
 
     res.json(rows)
   } catch (error) {
-    console.error(error)
-    res.status(500).json({ erro: 'Erro ao listar restaurantes' })
+    console.error('[GET /] Erro ao listar restaurantes:', error)
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    res.status(500).json({ 
+      erro: 'Erro ao listar restaurantes',
+      details: errorMsg,
+      debug: process.env.NODE_ENV !== 'production'
+    })
   }
 })
 
 // ── ROTAS FIXAS ANTES DE /:id ─────────────────────────────────────────────────
+
+// GET /api/restaurantes/debug/all — DEBUG: retorna TODOS os restaurantes sem filtros
+router.get('/debug/all', async (req, res: Response) => {
+  try {
+    const result = await db.execute({
+      sql: `SELECT id, nome, categoria, status, latitude, longitude, created_at FROM restaurantes LIMIT 100`,
+      args: []
+    })
+    const total = await db.execute({
+      sql: `SELECT COUNT(*) as total FROM restaurantes`,
+      args: []
+    })
+    res.json({
+      debug: true,
+      total: (total.rows[0] as any)?.total || 0,
+      returned: result.rows.length,
+      data: result.rows
+    })
+  } catch (error) {
+    console.error('[DEBUG] Erro ao listar todos os restaurantes:', error)
+    res.status(500).json({ erro: 'Erro ao listar restaurantes', error: String(error) })
+  }
+})
+
+// GET /api/restaurantes/debug/cardapio — DEBUG: verifica status da tabela cardapio
+router.get('/debug/cardapio', async (req, res: Response) => {
+  try {
+    const total = await db.execute({
+      sql: `SELECT COUNT(*) as total FROM cardapio`,
+      args: []
+    })
+    const sample = await db.execute({
+      sql: `SELECT id, restaurante_id, nome, disponivel FROM cardapio LIMIT 5`,
+      args: []
+    })
+    res.json({
+      debug: true,
+      total: (total.rows[0] as any)?.total || 0,
+      sample: sample.rows
+    })
+  } catch (error) {
+    console.error('[DEBUG] Erro ao verificar cardapio:', error)
+    res.status(500).json({ erro: 'Erro ao verificar cardapio', error: String(error) })
+  }
+})
 
 // GET /api/restaurantes/meu — busca a loja vinculada ao usuário logado
 router.get('/meu', requireAuth, async (req: AuthRequest, res: Response) => {
