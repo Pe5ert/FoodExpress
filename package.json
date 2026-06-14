@@ -8,6 +8,7 @@
     "dev:backend": "npm --prefix backend run dev",
     "install:all": "npm install && npm --prefix frontend install && npm --prefix backend install",
     "build": "npm --prefix frontend run build && npm --prefix backend run build",
+    "start": "npm --prefix backend start",
     "seed": "npm --prefix backend run seed"
   },
   "devDependencies": {
