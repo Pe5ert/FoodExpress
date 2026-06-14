@@ -143,10 +143,13 @@ function splitSqlStatements(schema: string) {
 
 async function aplicarSchemaMysql() {
   const candidatePaths = [
+    join(process.cwd(), '../../database/schema.sql'),
     join(process.cwd(), '../database/schema.sql'),
     join(process.cwd(), 'database/schema.sql'),
     join(process.cwd(), '../schema.sql'),
     join(process.cwd(), 'schema.sql'),
+    '/app/database/schema.sql',
+    join(process.cwd(), '../../../database/schema.sql'),
   ]
 
   let schema = ''
@@ -155,14 +158,36 @@ async function aplicarSchemaMysql() {
     try {
       schema = readFileSync(path, 'utf-8')
       foundPath = path
+      console.log(`📄 schema.sql encontrado: ${foundPath}`)
       break
     } catch {}
   }
   if (!schema) {
-    console.error('❌ schema.sql não encontrado em nenhum caminho candidato:', candidatePaths)
-    return
+    console.error('❌ schema.sql não encontrado em nenhum caminho candidato:')
+    candidatePaths.forEach((p, i) => console.error(`   ${i + 1}. ${p}`))
+    console.error('\n💡 Tentando usar schema embutido como fallback...')
+    
+    // Fallback: usar schema-embed.sql embutido no pacote
+    const embedPaths = [
+      join(__dirname, 'schema-embed.sql'),
+      join(process.cwd(), 'src/lib/schema-embed.sql'),
+      join(process.cwd(), '../src/lib/schema-embed.sql'),
+    ]
+    for (const path of embedPaths) {
+      try {
+        schema = readFileSync(path, 'utf-8')
+        foundPath = path
+        console.log(`📄 schema-embed.sql encontrado: ${foundPath}`)
+        break
+      } catch {}
+    }
+    
+    if (!schema) {
+      console.error('❌ Nenhum schema disponível (nem arquivo, nem embutido)')
+      console.error('   Por favor, verifique se database/schema.sql está no repositório')
+      throw new Error('Schema não encontrado')
+    }
   }
-  console.log(`📄 schema.sql encontrado: ${foundPath}`)
 
   const statements = splitSqlStatements(schema)
     .map(s => s.trim())
