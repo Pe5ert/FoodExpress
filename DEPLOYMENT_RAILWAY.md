@@ -26,6 +26,13 @@ O banco de dados `railway` foi criado, mas as tabelas não foram inicializadas. 
 
 ## Solução
 
+### 🔧 Mudanças Aplicadas Localmente
+
+✅ **railway.json** — Agora copia `database/` durante o build
+✅ **schema.ts** — Suporte a múltiplos caminhos de busca (incluindo `/app/database`)
+✅ **schema-embed.sql** — Fallback automático se arquivo não for encontrado
+✅ **Logging aprimorado** — Diagnóstico claro de onde o schema foi carregado
+
 ### 1️⃣ Verifique as Variáveis de Ambiente no Railway
 
 No painel do Railway, adicione essas variáveis ao serviço **backend**:
@@ -118,11 +125,39 @@ Modifique o `railway.json` para rodar schema antes do start:
 
 1. Veja os logs do Railway durante o startup
 2. Procure por mensagens como:
+   - 📄 `schema.sql encontrado: /app/database/schema.sql` (ou outro caminho)
+   - 📄 `schema-embed.sql encontrado:` (se usando fallback)
    - ✅ `Estrutura do banco validada sem popular dados`
-   - 📄 `schema.sql encontrado: ...`
    - ✅ `Schema aplicado: X criados, Y já existentes, Z erros`
 
-Se vir erros como `❌ Tabela ausente detectada`, o schema não foi aplicado completamente.
+3. **Sucesso completo**: Você deve ver a sequência de logs acima SEM nenhum erro de `ER_NO_SUCH_TABLE`
+
+### Troubleshooting — Se ainda vir erro
+
+Se mesmo com as mudanças o erro persistir:
+
+```
+❌ Table 'railway.restaurantes' doesn't exist
+```
+
+Pode ser que:
+
+1. **O cache de build está old** — Faça um rebuild completo:
+   ```bash
+   railway down
+   railway up --build
+   ```
+
+2. **Variáveis de banco não estão configuradas** — Verifique:
+   ```bash
+   railway vars
+   ```
+   Procure por `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `MYSQLDATABASE`
+
+3. **Permissões insuficientes** — Tente conectar manualmente:
+   ```bash
+   railway run npm run schema
+   ```
 
 ## Próximos Passos
 
