@@ -20,18 +20,27 @@ function idEstavel(valor: string) {
 }
 
 async function ensureColumn(table: string, column: string, definition: string) {
-  const result = await db.execute({
-    sql: `SELECT COUNT(*) AS total
-          FROM INFORMATION_SCHEMA.COLUMNS
-          WHERE TABLE_SCHEMA = DATABASE()
-            AND TABLE_NAME = ?
-            AND COLUMN_NAME = ?`,
-    args: [table, column]
-  })
-  const exists = Number((result.rows[0] as any)?.total || 0) > 0
-  if (!exists) {
-    await db.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
-    console.log(`➕ Coluna criada: ${table}.${column}`)
+  try {
+    const result = await db.execute({
+      sql: `SELECT COUNT(*) AS total
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = ?
+              AND COLUMN_NAME = ?`,
+      args: [table, column]
+    })
+    const exists = Number((result.rows[0] as any)?.total || 0) > 0
+    if (!exists) {
+      await db.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+      console.log(`➕ Coluna criada: ${table}.${column}`)
+    }
+  } catch (e: any) {
+    const message = String(e?.message || '').toLowerCase()
+    if (message.includes("doesn't exist") || message.includes('no such table')) {
+      console.error(`❌ Tabela não existe: ${table} (coluna ${column} não pode ser adicionada)`)
+      throw e
+    }
+    console.error(`⚠️ Erro ao verificar/criar coluna ${table}.${column}: ${e?.message}`)
   }
 }
 
@@ -141,33 +150,49 @@ async function aplicarSchemaMysql() {
   ]
 
   let schema = ''
+  let foundPath = ''
   for (const path of candidatePaths) {
     try {
       schema = readFileSync(path, 'utf-8')
+      foundPath = path
       break
     } catch {}
   }
-  if (!schema) return
+  if (!schema) {
+    console.error('❌ schema.sql não encontrado em nenhum caminho candidato:', candidatePaths)
+    return
+  }
+  console.log(`📄 schema.sql encontrado: ${foundPath}`)
 
   const statements = splitSqlStatements(schema)
     .map(s => s.trim())
     .filter(s => s.length > 4)
 
+  console.log(`📋 Total de statements para executar: ${statements.length}`)
+
+  let ok = 0, skip = 0, fail = 0
   for (const stmt of statements) {
     try {
       await db.execute(stmt)
+      ok++
     } catch (e: any) {
       const message = String(e?.message || '').toLowerCase()
       const code = String(e?.code || '')
       if (
-        !message.includes('duplicate') &&
-        !message.includes('already exists') &&
-        code !== 'ER_DUP_KEYNAME'
+        message.includes('duplicate') ||
+        message.includes('already exists') ||
+        code === 'ER_DUP_KEYNAME'
       ) {
+        skip++
+      } else {
+        console.error(`⚠️ Falha em statement: ${stmt.substring(0, 70)}...`)
+        console.error(`   Erro: ${e?.message}`)
+        fail++
         throw e
       }
     }
   }
+  console.log(`✅ Schema aplicado: ${ok} criados, ${skip} já existentes, ${fail} erros`)
 }
 
 async function garantirAdministradorPrincipal() {
@@ -306,12 +331,20 @@ export async function ensureDatabaseHealth() {
       if (!attemptedApplySchema && (message.includes("doesn't exist") || message.includes('no such table') || code === 'ER_NO_SUCH_TABLE')) {
         attemptedApplySchema = true
         try {
-          console.warn('Tabela ausente detectada — aplicando schema.sql novamente e revalida...')
+          console.warn('⚠️ Tabela ausente detectada — reapplicando schema.sql...')
           await aplicarSchemaMysql()
+          console.log('🔄 Schema reapplicado, tentando validação novamente...')
           await doValidation()
-        } catch (e) {
-          console.error('⚠️ Falha ao aplicar schema após detecção de tabela ausente:', e?.message || e)
-          throw e
+        } catch (reapplyError: any) {
+          const reapplyMsg = String(reapplyError?.message || '').toLowerCase()
+          console.error('\n❌ Auto-migration falhou: ERRO de reapplicação')
+          console.error(`   Mensagem original: ${error?.message || error}`)
+          console.error(`   Erro na reapplicação: ${reapplyError?.message || reapplyError}`)
+          console.error('\n💡 Próximas ações:')
+          console.error('   1. Verifique se o banco de dados no Railway está ativo')
+          console.error('   2. Verifique as variáveis de ambiente: DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, MYSQLDATABASE')
+          console.error('   3. Se preferir, execute manualmente: npm run schema no backend do Railway\n')
+          throw new Error(`Auto-migration falhou após tentativa de reapplicação: ${reapplyError?.message}`)
         }
       } else {
         console.error('⚠️ Falha ao validar schema automaticamente:', error.message)
